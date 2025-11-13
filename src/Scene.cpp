@@ -93,7 +93,7 @@ void Scene::render() const {
 
     // Render every object
     for(const SceneObject& obj : _objects) {
-        obj.render();
+        obj.render(_camera);
     }
 }
 
