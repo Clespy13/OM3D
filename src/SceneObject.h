@@ -3,6 +3,7 @@
 
 #include <StaticMesh.h>
 #include <Material.h>
+#include <Camera.h>
 
 #include <memory>
 
@@ -15,7 +16,7 @@ class SceneObject {
     public:
         SceneObject(std::shared_ptr<StaticMesh> mesh = nullptr, std::shared_ptr<Material> material = nullptr);
 
-        void render() const;
+        void render(Camera c) const;
 
         const Material& material() const;
 
@@ -23,6 +24,8 @@ class SceneObject {
         const glm::mat4& transform() const;
 
     private:
+        bool is_visible(Camera c) const;
+
         glm::mat4 _transform = glm::mat4(1.0f);
 
         std::shared_ptr<StaticMesh> _mesh;
