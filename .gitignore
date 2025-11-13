@@ -1,2 +1,8 @@
 /build/
 *.user
+*.nix
+.cache
+*.lock
+*.json
+.vscode
+*.glb
