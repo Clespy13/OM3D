@@ -6,9 +6,48 @@ namespace OM3D {
 
 extern bool audit_bindings_before_draw;
 
+namespace
+{
+    BoundingSphere compute_bounding_sphere(std::vector<Vertex> vertices)
+    {
+        BoundingSphere res;
+
+        glm::vec3 vmin = glm::vec3(0);
+        glm::vec3 vmax = glm::vec3(0);
+        for (Vertex& v : vertices)
+        {
+            if (v.position.x < vmin.x)
+                vmin.x = v.position.x;
+            if (v.position.y < vmin.y)
+                vmin.y = v.position.y;
+            if (v.position.z < vmin.z)
+                vmin.z = v.position.z;
+
+            if (v.position.x > vmax.x)
+                vmax.x = v.position.x;
+            if (v.position.y > vmax.y)
+                vmax.y = v.position.y;
+            if (v.position.z > vmax.z)
+                vmax.z = v.position.z;
+        }
+
+        float xdiff = vmax.x - vmin.x;
+        float ydiff = vmax.y - vmin.y;
+        float zdiff = vmax.z - vmin.z;
+
+        float diameter = std::max(xdiff, std::max(ydiff, zdiff));
+
+        res.radius = diameter * 0.5f;
+        res.center = vmin + (vmax - vmin) * 0.5f;
+
+        return res;
+    }
+}
+
 StaticMesh::StaticMesh(const MeshData& data) :
     _vertex_buffer(data.vertices),
-    _index_buffer(data.indices) {
+    _index_buffer(data.indices),
+    _bounding_sphere(compute_bounding_sphere(data.vertices)) {
 }
 
 void StaticMesh::draw() const {
@@ -37,6 +76,11 @@ void StaticMesh::draw() const {
     }
 
     glDrawElements(GL_TRIANGLES, int(_index_buffer.element_count()), GL_UNSIGNED_INT, nullptr);
+}
+
+const BoundingSphere& StaticMesh::bounding_sphere() const
+{
+    return _bounding_sphere;
 }
 
 }
