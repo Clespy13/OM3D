@@ -35,6 +35,11 @@ file(GLOB_RECURSE EXTERNAL_FILES
     "external/imgui/*.h"
 )
 
+# Collect ImGui sources separately to adjust warnings for modern compilers
+file(GLOB IMGUI_SOURCES
+    "external/imgui/*.cpp"
+)
+
 # Shader files
 file(GLOB_RECURSE SHADER_FILES
     "shaders/*.frag"
@@ -47,5 +52,16 @@ file(GLOB_RECURSE SHADER_FILES
 
 
 add_executable(OM3D ${SOURCE_FILES} ${EXTERNAL_FILES} ${SHADER_FILES})
+
+# Suppress a Clang-only warning in older ImGui that becomes an error under -Werror
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set_source_files_properties(${IMGUI_SOURCES} PROPERTIES COMPILE_OPTIONS "-Wno-nontrivial-memcall;-Wno-error=nontrivial-memcall")
+endif()
+
+# Tame GCC 14 warnings that trip on vendored headers while keeping -Werror globally
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(OM3D PRIVATE -Wno-maybe-uninitialized -Wno-free-nonheap-object)
+endif()
+
 target_link_libraries(OM3D glfw)
 target_compile_options(OM3D PUBLIC ${COMPILE_OPTIONS})
