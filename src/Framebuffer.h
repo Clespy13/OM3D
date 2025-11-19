@@ -3,6 +3,8 @@
 
 #include <Texture.h>
 
+#include <glad/gl.h>
+
 #include <array>
 
 namespace OM3D {
@@ -25,6 +27,7 @@ class Framebuffer : NonCopyable {
         void bind(bool clear_depth, bool clear_color) const;
 
         const glm::uvec2& size() const;
+        GLuint handle() const;
 
     private:
         Framebuffer(Texture* depth, Texture** colors, size_t count);

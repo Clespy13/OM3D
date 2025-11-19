@@ -17,6 +17,7 @@ class SceneObject {
         SceneObject(std::shared_ptr<StaticMesh> mesh = nullptr, std::shared_ptr<Material> material = nullptr);
 
         void render(Camera c) const;
+        void render_with_material(Camera c, const Material& material) const;
 
         const Material& material() const;
 

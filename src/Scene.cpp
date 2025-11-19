@@ -4,11 +4,16 @@
 
 #include <shader_structs.h>
 
+#include <glad/gl.h>
+
 namespace OM3D {
 
 Scene::Scene() {
     _sky_material.set_program(Program::from_files("sky.frag", "screen.vert"));
-    _sky_material.set_depth_test_mode(DepthTestMode::None);
+    _sky_material.set_depth_test_mode(DepthTestMode::Equal);
+
+    _depth_prepass_material.set_program(Program::from_files("prepass.frag", "basic.vert"));
+    _depth_prepass_material.set_depth_test_mode(DepthTestMode::Standard);
 
     _envmap = std::make_shared<Texture>(Texture::empty_cubemap(4, ImageFormat::RGBA8_UNORM));
 }
@@ -54,7 +59,63 @@ void Scene::set_sun(float altitude, float azimuth, glm::vec3 color) {
     _sun_color = color;
 }
 
+std::shared_ptr<Texture> Scene::depth_prepass_texture() const {
+    return _depth_prepass_texture;
+}
+
+void Scene::depth_prepass() const {
+    // Get current viewport size from OpenGL
+    int viewport[4] = {};
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    const glm::uvec2 viewport_size(viewport[2], viewport[3]);
+
+    // Create depth prepass texture and framebuffer
+    _depth_prepass_texture = std::make_shared<Texture>(viewport_size, ImageFormat::Depth32_FLOAT, WrapMode::Clamp);
+    _depth_prepass_fbo = std::make_unique<Framebuffer>(_depth_prepass_texture.get());
+
+    // Fill and bind frame data buffer
+    TypedBuffer<shader::FrameData> buffer(nullptr, 1);
+    {
+        auto mapping = buffer.map(AccessType::WriteOnly);
+        mapping[0].camera.view_proj = _camera.view_proj_matrix();
+        mapping[0].camera.inv_view_proj = glm::inverse(_camera.view_proj_matrix());
+        mapping[0].camera.position = _camera.position();
+        mapping[0].point_light_count = u32(_point_lights.size());
+        mapping[0].sun_color = _sun_color;
+        mapping[0].sun_dir = glm::normalize(_sun_direction);
+    }
+    buffer.bind(BufferUsage::Uniform, 0);
+
+    // Render all opaque objects to depth buffer only
+    _depth_prepass_fbo->bind(true, false);
+    for(const SceneObject& obj : _objects) {
+        obj.render_with_material(_camera, _depth_prepass_material);
+    }
+}
+
 void Scene::render() const {
+    // Get current viewport size
+    int viewport[4] = {};
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    const glm::uvec2 viewport_size(viewport[2], viewport[3]);
+
+    // Save the current framebuffer
+    GLint previous_fbo = 0;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previous_fbo);
+    
+    // Copy depth from prepass FBO to main FBO
+    if(_depth_prepass_fbo) {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, previous_fbo);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, _depth_prepass_fbo->handle());
+        
+        glBlitFramebuffer(
+            0, 0, viewport_size.x, viewport_size.y,
+            0, 0, viewport_size.x, viewport_size.y,
+            GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        
+        glBindFramebuffer(GL_FRAMEBUFFER, previous_fbo);
+    }
+
     // Fill and bind frame data buffer
     TypedBuffer<shader::FrameData> buffer(nullptr, 1);
     {

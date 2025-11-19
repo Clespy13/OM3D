@@ -453,6 +453,12 @@ int main(int argc, char** argv) {
         {
             PROFILE_GPU("Frame");
 
+            // Z-prepass
+            {
+                PROFILE_GPU("Z-prepass");
+                scene->depth_prepass();
+            }
+
             // Render the scene
             {
                 PROFILE_GPU("Main pass");

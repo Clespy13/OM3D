@@ -4,6 +4,7 @@
 #include <SceneObject.h>
 #include <PointLight.h>
 #include <Camera.h>
+#include <Framebuffer.h>
 
 #include <vector>
 #include <memory>
@@ -17,6 +18,7 @@ class Scene : NonMovable {
 
         static Result<std::unique_ptr<Scene>> from_gltf(const std::string& file_name);
 
+        void depth_prepass() const;
         void render() const;
 
         void add_object(SceneObject obj);
@@ -33,6 +35,8 @@ class Scene : NonMovable {
 
         void set_sun(float altitude, float azimuth, glm::vec3 color = glm::vec3(1.0f));
 
+        std::shared_ptr<Texture> depth_prepass_texture() const;
+
     private:
         std::vector<SceneObject> _objects;
         std::vector<PointLight> _point_lights;
@@ -43,6 +47,9 @@ class Scene : NonMovable {
         std::shared_ptr<Texture> _envmap;
         float _ibl_intensity = 1.0f;
         Material _sky_material;
+        Material _depth_prepass_material;
+        mutable std::shared_ptr<Texture> _depth_prepass_texture;
+        mutable std::unique_ptr<Framebuffer> _depth_prepass_fbo;
 
         Camera _camera;
 };
