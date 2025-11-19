@@ -26,6 +26,17 @@ const Material& SceneObject::material() const {
     return *_material;
 }
 
+void SceneObject::render_with_material(Camera c, const Material& material) const {
+    bool visible = is_visible(c);
+    if(!_mesh || !visible) {
+        return;
+    }
+
+    material.set_uniform(HASH("model"), transform());
+    material.bind();
+    _mesh->draw();
+}
+
 void SceneObject::set_transform(const glm::mat4& tr) {
     _transform = tr;
 }

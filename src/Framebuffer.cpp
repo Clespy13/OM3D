@@ -122,4 +122,8 @@ const glm::uvec2& Framebuffer::size() const {
     return _size;
 }
 
+GLuint Framebuffer::handle() const {
+    return _handle.get();
+}
+
 }
