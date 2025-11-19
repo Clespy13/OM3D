@@ -102,17 +102,17 @@ void Scene::render() const {
     // Save the current framebuffer
     GLint previous_fbo = 0;
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previous_fbo);
-    
+
     // Copy depth from prepass FBO to main FBO
     if(_depth_prepass_fbo) {
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, previous_fbo);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, _depth_prepass_fbo->handle());
-        
+
         glBlitFramebuffer(
             0, 0, viewport_size.x, viewport_size.y,
             0, 0, viewport_size.x, viewport_size.y,
             GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-        
+
         glBindFramebuffer(GL_FRAMEBUFFER, previous_fbo);
     }
 
@@ -163,14 +163,14 @@ void Scene::render() const {
         // Opaque first
         for(const SceneObject& obj : _objects) {
             if(obj.material().is_opaque()) {
-                obj.render();
+                obj.render(_camera);
             }
         }
 
         // Transparent after
         for(const SceneObject& obj : _objects) {
             if(!obj.material().is_opaque()) {
-                obj.render();
+                obj.render(_camera);
             }
         }
     }
