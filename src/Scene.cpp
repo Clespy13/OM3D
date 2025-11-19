@@ -48,8 +48,8 @@ void Scene::set_envmap(std::shared_ptr<Texture> env) {
 
 void Scene::set_sun(float altitude, float azimuth, glm::vec3 color) {
     // Convert from degrees to radians
-    const float alt = glm::radians(altitude); 
-    const float azi = glm::radians(azimuth); 
+    const float alt = glm::radians(altitude);
+    const float azi = glm::radians(azimuth);
     // Convert from polar to cartesian
     _sun_direction = glm::vec3(sin(azi) * cos(alt), sin(alt), cos(azi) * cos(alt));
     _sun_color = color;
@@ -98,17 +98,17 @@ void Scene::render() const {
     // Save the current framebuffer
     GLint previous_fbo = 0;
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previous_fbo);
-    
+
     // Copy depth from prepass FBO to main FBO
     if(_depth_prepass_fbo) {
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, previous_fbo);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, _depth_prepass_fbo->handle());
-        
+
         glBlitFramebuffer(
             0, 0, viewport_size.x, viewport_size.y,
             0, 0, viewport_size.x, viewport_size.y,
             GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-        
+
         glBindFramebuffer(GL_FRAMEBUFFER, previous_fbo);
     }
 
@@ -157,14 +157,14 @@ void Scene::render() const {
         // Opaque first
         for(const SceneObject& obj : _objects) {
             if(obj.material().is_opaque()) {
-                obj.render();
+                obj.render(_camera);
             }
         }
 
         // Transparent after
         for(const SceneObject& obj : _objects) {
             if(!obj.material().is_opaque()) {
-                obj.render();
+                obj.render(_camera);
             }
         }
     }
