@@ -65,3 +65,4 @@ endif()
 
 target_link_libraries(OM3D glfw)
 target_compile_options(OM3D PUBLIC ${COMPILE_OPTIONS})
+target_compile_definitions(OM3D PRIVATE OM3D_DEBUG_DRAW_BOUNDING_SPHERES)

@@ -1,6 +1,7 @@
 #include "StaticMesh.h"
 
 #include <glad/gl.h>
+#include <glm/gtx/norm.hpp>
 
 namespace OM3D {
 
@@ -12,23 +13,17 @@ namespace
     {
         BoundingSphere res;
 
-        glm::vec3 vmin = glm::vec3(0);
-        glm::vec3 vmax = glm::vec3(0);
+        glm::vec3 vmin = vertices.front().position;
+        glm::vec3 vmax = vertices.front().position;
         for (Vertex& v : vertices)
         {
-            if (v.position.x < vmin.x)
-                vmin.x = v.position.x;
-            if (v.position.y < vmin.y)
-                vmin.y = v.position.y;
-            if (v.position.z < vmin.z)
-                vmin.z = v.position.z;
+            vmin.x = std::min(v.position.x, vmin.x);
+            vmin.y = std::min(v.position.y, vmin.y);
+            vmin.z = std::min(v.position.z, vmin.z);
 
-            if (v.position.x > vmax.x)
-                vmax.x = v.position.x;
-            if (v.position.y > vmax.y)
-                vmax.y = v.position.y;
-            if (v.position.z > vmax.z)
-                vmax.z = v.position.z;
+            vmax.x = std::max(v.position.x, vmax.x);
+            vmax.y = std::max(v.position.y, vmax.y);
+            vmax.z = std::max(v.position.z, vmax.z);
         }
 
         float xdiff = vmax.x - vmin.x;
@@ -38,7 +33,27 @@ namespace
         float diameter = std::max(xdiff, std::max(ydiff, zdiff));
 
         res.radius = diameter * 0.5f;
-        res.center = vmin + (vmax - vmin) * 0.5f;
+        res.center = (vmax + vmin) * 0.5f;
+        //res.center = vmin + (vmax - vmin) * 0.5f;
+
+        for (Vertex& v : vertices)
+        {
+            glm::vec3 point = v.position;
+            glm::vec3 direction = point - res.center;
+            float sq_distance = glm::length2(direction);
+            float sq_radius = res.radius * res.radius;
+
+            if (sq_distance > sq_radius)
+            {
+                float distance = glm::sqrt(sq_distance);
+                float new_radius = (res.radius + distance) * 0.5f;
+                float offset = new_radius - res.radius;
+                
+                // Normalize direction and move center
+                res.center += (offset / distance) * direction;
+                res.radius = new_radius;
+            }
+        }
 
         return res;
     }

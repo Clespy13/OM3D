@@ -38,14 +38,29 @@ bool SceneObject::is_visible(Camera c) const {
     Frustum f = c.build_frustum();
     BoundingSphere s = _mesh->bounding_sphere();
 
-    glm::vec3 sphere_world_pos = transform() * glm::vec4(s.center, 0.0);
+    glm::vec3 sphere_world_pos = glm::vec3(transform() * glm::vec4(s.center, 1.0f));
+
+    const glm::vec3 sx = glm::vec3(transform()[0]);
+    const glm::vec3 sy = glm::vec3(transform()[1]);
+    const glm::vec3 sz = glm::vec3(transform()[2]);
+    const float scale_x = glm::length(sx);
+    const float scale_y = glm::length(sy);
+    const float scale_z = glm::length(sz);
+    const float world_radius = s.radius * std::max(scale_x, std::max(scale_y, scale_z));
+
     glm::vec3 obj_dir = sphere_world_pos - c.position();
 
-    float dot_near = glm::dot(f._near_normal, obj_dir + f._near_normal * s.radius);
-    float dot_left = glm::dot(f._left_normal, obj_dir + f._left_normal * s.radius);
-    float dot_right = glm::dot(f._right_normal, obj_dir + f._right_normal * s.radius);
-    float dot_top = glm::dot(f._top_normal, obj_dir + f._top_normal * s.radius);
-    float dot_bottom = glm::dot(f._bottom_normal, obj_dir + f._bottom_normal * s.radius);
+    const glm::vec3 near_n = glm::normalize(f._near_normal);
+    const glm::vec3 left_n = glm::normalize(f._left_normal);
+    const glm::vec3 right_n = glm::normalize(f._right_normal);
+    const glm::vec3 top_n = glm::normalize(f._top_normal);
+    const glm::vec3 bottom_n = glm::normalize(f._bottom_normal);
+
+    float dot_near = glm::dot(near_n, obj_dir) + world_radius;
+    float dot_left = glm::dot(left_n, obj_dir) + world_radius;
+    float dot_right = glm::dot(right_n, obj_dir) + world_radius;
+    float dot_top = glm::dot(top_n, obj_dir) + world_radius;
+    float dot_bottom = glm::dot(bottom_n, obj_dir) + world_radius;
 
     return dot_near > 0 && dot_left > 0 && dot_right > 0 && dot_top > 0
         && dot_bottom > 0;
