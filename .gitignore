@@ -6,3 +6,7 @@
 *.json
 .vscode
 *.glb
+*.zip
+*.7zip
+*.tgz
+*.tar.gz
