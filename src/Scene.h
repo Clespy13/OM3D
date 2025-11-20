@@ -19,6 +19,7 @@ class Scene : NonMovable {
         static Result<std::unique_ptr<Scene>> from_gltf(const std::string& file_name);
 
         void depth_prepass() const;
+        void shadow_pass() const;
         void render() const;
 
         void add_object(SceneObject obj);
@@ -48,10 +49,14 @@ class Scene : NonMovable {
         float _ibl_intensity = 1.0f;
         Material _sky_material;
         Material _depth_prepass_material;
+        Material _shadow_pass_material;
         mutable std::shared_ptr<Texture> _depth_prepass_texture;
         mutable std::unique_ptr<Framebuffer> _depth_prepass_fbo;
+        mutable std::shared_ptr<Texture> _shadow_pass_texture;
+        mutable std::unique_ptr<Framebuffer> _shadow_pass_fbo;
 
         Camera _camera;
+        Camera _shadow_cam;
 };
 
 }

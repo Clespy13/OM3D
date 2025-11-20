@@ -459,6 +459,12 @@ int main(int argc, char** argv) {
                 scene->depth_prepass();
             }
 
+            // Shadow pass
+            {
+                PROFILE_GPU("Shadow pass");
+                scene->shadow_pass();
+            }
+
             // Render the scene
             {
                 PROFILE_GPU("Main pass");

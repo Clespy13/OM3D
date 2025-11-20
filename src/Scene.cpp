@@ -2,6 +2,7 @@
 
 #include <TypedBuffer.h>
 
+#include <glm/ext/matrix_transform.hpp>
 #include <shader_structs.h>
 
 #include <glad/gl.h>
@@ -14,6 +15,9 @@ Scene::Scene() {
 
     _depth_prepass_material.set_program(Program::from_files("prepass.frag", "basic.vert"));
     _depth_prepass_material.set_depth_test_mode(DepthTestMode::Standard);
+
+    _shadow_pass_material.set_program(Program::from_files("prepass.frag", "basic.vert"));
+    _shadow_pass_material.set_depth_test_mode(DepthTestMode::Standard);
 
     _envmap = std::make_shared<Texture>(Texture::empty_cubemap(4, ImageFormat::RGBA8_UNORM));
 }
@@ -90,6 +94,41 @@ void Scene::depth_prepass() const {
     _depth_prepass_fbo->bind(true, false);
     for(const SceneObject& obj : _objects) {
         obj.render_with_material(_camera, _depth_prepass_material);
+    }
+}
+
+void Scene::shadow_pass() const {
+    // Get current viewport size from OpenGL
+    int viewport[4] = {};
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    const glm::uvec2 viewport_size(viewport[2], viewport[3]);
+
+    // Create shadow pass texture and framebuffer
+    _shadow_pass_texture = std::make_shared<Texture>(viewport_size, ImageFormat::Depth32_FLOAT, WrapMode::Clamp);
+    _shadow_pass_fbo = std::make_unique<Framebuffer>(_shadow_pass_texture.get());
+
+    _shadow_cam = Camera();
+    glm::mat4 camera_ortho = Camera::orthographic(-100, 100, -100, 100, 10, 1000);
+    _shadow_cam.set_proj(camera_ortho);
+    _shadow_cam.set_view(glm::lookAt(-_sun_direction * 10.0f, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
+
+    // Fill and bind frame data buffer
+    TypedBuffer<shader::FrameData> buffer(nullptr, 1);
+    {
+        auto mapping = buffer.map(AccessType::WriteOnly);
+        mapping[0].camera.view_proj = _shadow_cam.view_proj_matrix();
+        mapping[0].camera.inv_view_proj = glm::inverse(_shadow_cam.view_proj_matrix());
+        mapping[0].camera.position = _shadow_cam.position();
+        mapping[0].point_light_count = u32(_point_lights.size());
+        mapping[0].sun_color = _sun_color;
+        mapping[0].sun_dir = glm::normalize(_sun_direction);
+    }
+    buffer.bind(BufferUsage::Uniform, 0);
+
+    // Render all opaque objects to depth buffer only
+    _shadow_pass_fbo->bind(true, false);
+    for(const SceneObject& obj : _objects) {
+        obj.render_with_material(_shadow_cam, _shadow_pass_material);
     }
 }
 
