@@ -1,5 +1,6 @@
 #include "Texture.h"
 #include "Program.h"
+#include "graphics.h"
 
 #include <glad/gl.h>
 
@@ -151,6 +152,10 @@ u32 Texture::texture_type() const {
 
 glm::uvec2 Texture::size() const {
     return _size;
+}
+
+u32 Texture::handle() const {
+    return _handle.get();
 }
 
 // Return number of mip levels needed
