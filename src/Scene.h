@@ -19,7 +19,7 @@ class Scene : NonMovable {
         static Result<std::unique_ptr<Scene>> from_gltf(const std::string& file_name);
 
         void depth_prepass() const;
-        void shadow_pass() const;
+        void shadow_pass();
         void render() const;
 
         void add_object(SceneObject obj);

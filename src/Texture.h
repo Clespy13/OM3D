@@ -55,6 +55,8 @@ class Texture {
 
         glm::uvec2 size() const;
 
+        u32 handle() const;
+
         static u32 mip_levels(glm::uvec2 size);
 
     private:

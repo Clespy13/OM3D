@@ -31,6 +31,7 @@ uniform float alpha_cutoff;
 
 layout(binding = 4) uniform samplerCube in_envmap;
 layout(binding = 5) uniform sampler2D brdf_lut;
+layout(binding = 6) uniform sampler2DShadow in_shadow;
 
 layout(binding = 0) uniform Data {
     FrameData frame;

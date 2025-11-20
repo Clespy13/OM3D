@@ -97,7 +97,7 @@ void Scene::depth_prepass() const {
     }
 }
 
-void Scene::shadow_pass() const {
+void Scene::shadow_pass() {
     // Get current viewport size from OpenGL
     int viewport[4] = {};
     glGetIntegerv(GL_VIEWPORT, viewport);
@@ -105,6 +105,8 @@ void Scene::shadow_pass() const {
 
     // Create shadow pass texture and framebuffer
     _shadow_pass_texture = std::make_shared<Texture>(viewport_size, ImageFormat::Depth32_FLOAT, WrapMode::Clamp);
+    glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_COMPARE_FUNC, GL_LESS);
     _shadow_pass_fbo = std::make_unique<Framebuffer>(_shadow_pass_texture.get());
 
     _shadow_cam = Camera();
@@ -153,6 +155,10 @@ void Scene::render() const {
             GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 
         glBindFramebuffer(GL_FRAMEBUFFER, previous_fbo);
+    }
+
+    if (_shadow_pass_fbo) {
+        _shadow_pass_texture->bind(6);
     }
 
     // Fill and bind frame data buffer
