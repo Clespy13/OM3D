@@ -27,7 +27,7 @@ const Material& SceneObject::material() const {
 }
 
 void SceneObject::render_with_material(Camera c, const Material& material) const {
-    bool visible = is_visible(c);
+    bool visible = c.is_orthographic() ? true : is_visible(c);
     if(!_mesh || !visible) {
         return;
     }
