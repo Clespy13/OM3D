@@ -72,7 +72,7 @@ void main() {
         vec3 shadow_ndc = shadow_clip.xyz / shadow_clip.w;
 
         // [-1,1] to [0,1]
-        vec3 shadow_uv = shadow_ndc * 0.5 + 0.5;
+        vec3 shadow_uv = vec3(shadow_ndc.xy * 0.5 + 0.5, shadow_ndc.z);
         
         // Apply bias to reduce shadow acne (add in reverse-Z, subtract in normal Z)
         shadow_uv.z += frame.sun_bias;
