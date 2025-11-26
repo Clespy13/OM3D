@@ -65,10 +65,20 @@ void main() {
     const vec3 to_view = (frame.camera.position - in_position);
     const vec3 view_dir = normalize(to_view);
 
+    // put coords in clip space for shadow map using shadow camera
+    const vec4 shadow_pos = frame.shadow_view_proj * vec4(in_position, 1.0);
+    const vec3 shadow_ndc = shadow_pos.xyz / shadow_pos.w;
+    // remap from [-1, 1] to [0, 1]
+    vec3 shadow_uv = shadow_ndc * 0.5 + 0.5;
+    // Apply depth bias
+    shadow_uv.z -= frame.sun_bias;
+
+    float shadow_map = texture(in_shadow, shadow_uv);
+
     vec3 acc = texture(in_emissive, in_uv).rgb * emissive_factor;
     acc += eval_ibl(in_envmap, brdf_lut, normal, view_dir, base_color, metallic, roughness) * frame.ibl_intensity;
     {
-        acc += frame.sun_color * eval_brdf(normal, view_dir, frame.sun_dir, base_color, metallic, roughness);
+        acc += frame.sun_color * eval_brdf(normal, view_dir, frame.sun_dir, base_color, metallic, roughness) * shadow_map;
 
         for(uint i = 0; i != frame.point_light_count; ++i) {
             PointLight light = point_lights[i];
@@ -81,7 +91,7 @@ void main() {
                 continue;
             }
 
-            acc += eval_brdf(normal, view_dir, light_vec, base_color, metallic, roughness) * att * light.color;
+            acc += eval_brdf(normal, view_dir, light_vec, base_color, metallic, roughness) * att * light.color * shadow_map;
         }
     }
 
