@@ -7,6 +7,8 @@
 
 #include <glad/gl.h>
 
+#include <iostream>
+
 namespace OM3D {
 
 Scene::Scene() {
@@ -99,21 +101,32 @@ void Scene::depth_prepass() const {
 }
 
 void Scene::shadow_pass() {
-    // Get current viewport size from OpenGL
-    int viewport[4] = {};
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    const glm::uvec2 viewport_size(viewport[2], viewport[3]);
+    const glm::uvec2 shadow_map_size(2048, 2048);
 
     // Create shadow pass texture and framebuffer
-    _shadow_pass_texture = std::make_shared<Texture>(viewport_size, ImageFormat::Depth32_FLOAT, WrapMode::Clamp);
+    glViewport(0, 0, shadow_map_size.x, shadow_map_size.y);
+    _shadow_pass_texture = std::make_shared<Texture>(shadow_map_size, ImageFormat::Depth32_FLOAT, WrapMode::Clamp);
     glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-    glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+    glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_COMPARE_FUNC, GL_GEQUAL);
     _shadow_pass_fbo = std::make_unique<Framebuffer>(_shadow_pass_texture.get());
 
     _shadow_cam = Camera();
-    glm::mat4 camera_ortho = Camera::orthographic(-100, 100, -100, 100, 10, 1000);
-    _shadow_cam.set_proj(camera_ortho);
-    _shadow_cam.set_view(glm::lookAt(-_sun_direction * 10.0f, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
+
+    const glm::vec3 scene_center = glm::vec3(0.0f);
+    const float scene_radius = 100.0f;
+
+    const glm::vec3 sun_dir = glm::normalize(_sun_direction);
+    const glm::vec3 shadow_cam_pos = scene_center - sun_dir * (scene_radius * 2.0f);
+
+    const glm::vec3 up = glm::abs(sun_dir.y) > 0.99f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+    _shadow_cam.set_view(glm::lookAt(shadow_cam_pos, scene_center, up));
+
+    const float extent = scene_radius * 1.2f;
+    const float near_plane = 0.1f;
+    const float far_plane = scene_radius * 4.0f;
+
+    glm::mat4 shadow_proj = Camera::orthographic(-extent, extent, -extent, extent, near_plane, far_plane);
+    _shadow_cam.set_proj(shadow_proj);
 
     // Fill and bind frame data buffer
     TypedBuffer<shader::FrameData> buffer(nullptr, 1);
@@ -125,6 +138,8 @@ void Scene::shadow_pass() {
         mapping[0].point_light_count = u32(_point_lights.size());
         mapping[0].sun_color = _sun_color;
         mapping[0].sun_dir = glm::normalize(_sun_direction);
+        mapping[0].sun_bias = _sun_bias;
+        mapping[0].shadow_view_proj = _shadow_cam.view_proj_matrix();
     }
     buffer.bind(BufferUsage::Uniform, 0);
 

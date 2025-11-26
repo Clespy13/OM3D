@@ -21,12 +21,12 @@ using namespace OM3D;
 
 
 static float delta_time = 0.0f;
-static float sun_altitude = 45.0f;
-static float sun_azimuth = 45.0f;
-static float sun_intensity = 7.0f;
+static float sun_altitude = 45.0;
+static float sun_azimuth = 45.0;
+static float sun_intensity = 7.0;
 static float ibl_intensity = 1.0f;
-static float sun_bias = 0.2f;
-static float exposure = 0.33f;
+static float sun_bias = 0.001f;
+static float exposure = 1.0;
 
 static std::unique_ptr<Scene> scene;
 static std::shared_ptr<Texture> envmap;
@@ -472,7 +472,7 @@ int main(int argc, char** argv) {
             // Render the scene
             {
                 PROFILE_GPU("Main pass");
-
+                glViewport(0, 0, int(renderer.size.x), int(renderer.size.y));
                 renderer.main_framebuffer.bind(true, true);
                 scene->render();
             }
