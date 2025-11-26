@@ -101,7 +101,7 @@ void Scene::depth_prepass() const {
 }
 
 void Scene::shadow_pass() {
-    const glm::uvec2 shadow_map_size(16, 16);
+    const glm::uvec2 shadow_map_size(2048, 2048);
 
     // Create shadow pass texture and framebuffer
     glViewport(0, 0, shadow_map_size.x, shadow_map_size.y);
@@ -115,17 +115,17 @@ void Scene::shadow_pass() {
     _shadow_cam = Camera();
 
     const glm::vec3 scene_center = glm::vec3(0.0f);
-    const float scene_radius = 100.0f;
+    const float scene_radius = 40.0f;
 
     const glm::vec3 sun_dir = glm::normalize(_sun_direction);
     const glm::vec3 shadow_cam_pos = scene_center - sun_dir * (scene_radius * 2.0f);
 
     const glm::vec3 up = glm::abs(sun_dir.y) > 0.99f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
-    _shadow_cam.set_view(glm::lookAt(shadow_cam_pos, scene_center, up));
+    _shadow_cam.set_view(glm::lookAt(-shadow_cam_pos, scene_center, up));
 
-    const float extent = scene_radius;
-    const float near_plane = scene_radius * 5.0f;
-    const float far_plane = 0.1f;
+    const float extent = scene_radius * 1.2f;
+    const float near_plane = 0.1f;
+    const float far_plane = scene_radius * 4.0f;
 
     glm::mat4 shadow_proj = Camera::orthographic(-extent, extent, -extent, extent, near_plane, far_plane);
     _shadow_cam.set_proj(shadow_proj);
