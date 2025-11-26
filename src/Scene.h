@@ -32,7 +32,7 @@ class Scene : NonMovable {
         const Camera& camera() const;
 
         void set_envmap(std::shared_ptr<Texture> env);
-        void set_sun(float altitude, float azimuth, glm::vec3 color = glm::vec3(1.0f), float bias = 0.1f);
+        void set_sun(float altitude, float azimuth, glm::vec3 color = glm::vec3(1.0f), float bias = 0.001f);
 
         std::shared_ptr<Texture> depth_prepass_texture() const;
 
@@ -42,7 +42,7 @@ class Scene : NonMovable {
 
         glm::vec3 _sun_direction = glm::vec3(0.2f, 1.0f, 0.1f);
         glm::vec3 _sun_color = glm::vec3(1.0f);
-        float _sun_bias = 0.1f;
+        float _sun_bias = 0.001f;
 
         std::shared_ptr<Texture> _envmap;
         Material _sky_material;
