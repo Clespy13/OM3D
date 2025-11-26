@@ -107,7 +107,7 @@ void Scene::shadow_pass() {
     glViewport(0, 0, shadow_map_size.x, shadow_map_size.y);
     _shadow_pass_texture = std::make_shared<Texture>(shadow_map_size, ImageFormat::Depth32_FLOAT, WrapMode::Clamp);
     glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-    glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_COMPARE_FUNC, GL_GEQUAL);
+    glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
     _shadow_pass_fbo = std::make_unique<Framebuffer>(_shadow_pass_texture.get());
 
     _shadow_cam = Camera();
@@ -119,7 +119,7 @@ void Scene::shadow_pass() {
     const glm::vec3 shadow_cam_pos = scene_center - sun_dir * (scene_radius * 2.0f);
 
     const glm::vec3 up = glm::abs(sun_dir.y) > 0.99f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
-    _shadow_cam.set_view(glm::lookAt(shadow_cam_pos, scene_center, up));
+    _shadow_cam.set_view(glm::lookAt(-shadow_cam_pos, scene_center, up));
 
     const float extent = scene_radius * 1.2f;
     const float near_plane = 0.1f;
