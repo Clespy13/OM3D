@@ -101,13 +101,15 @@ void Scene::depth_prepass() const {
 }
 
 void Scene::shadow_pass() {
-    const glm::uvec2 shadow_map_size(2048, 2048);
+    const glm::uvec2 shadow_map_size(16, 16);
 
     // Create shadow pass texture and framebuffer
     glViewport(0, 0, shadow_map_size.x, shadow_map_size.y);
     _shadow_pass_texture = std::make_shared<Texture>(shadow_map_size, ImageFormat::Depth32_FLOAT, WrapMode::Clamp);
     glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
     glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_COMPARE_FUNC, GL_GEQUAL);
+    glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     _shadow_pass_fbo = std::make_unique<Framebuffer>(_shadow_pass_texture.get());
 
     _shadow_cam = Camera();
