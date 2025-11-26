@@ -73,17 +73,23 @@ void main() {
 
         // [-1,1] to [0,1]
         vec3 shadow_uv = vec3(shadow_ndc.xy * 0.5 + 0.5, shadow_ndc.z);
-        
-        // Apply bias to reduce shadow acne (add in reverse-Z, subtract in normal Z)
-        shadow_uv.z += frame.sun_bias;
 
-        for (float i = -1; i <= 1; i++) {
-            for (float j = -1; j <= 1; j++) {
-                vec2 UV_offseted = shadow_uv.xy + (vec2(i, j) / textureSize(in_shadow, 0).xy); // Offset the UV
-                shadow += texture(in_shadow, vec3(UV_offseted, shadow_uv.z));  // Accumulate the samples
+        if (shadow_uv.x >= 0.0 && shadow_uv.x <= 1.0 && 
+            shadow_uv.y >= 0.0 && shadow_uv.y <= 1.0 &&
+            shadow_uv.z >= 0.0 && shadow_uv.z <= 1.0) {
+            shadow_uv.z += frame.sun_bias;
+
+            for (float i = -1; i <= 1; i++) {
+                for (float j = -1; j <= 1; j++) {
+                    vec2 UV_offseted = shadow_uv.xy + (vec2(i, j) / textureSize(in_shadow, 0).xy); // Offset the UV
+                    shadow += texture(in_shadow, vec3(UV_offseted, shadow_uv.z));  // Accumulate the samples
+                }
             }
+            shadow /= 9; // divide by the number of the samples
+        } else {
+            // clamp to far plane
+            shadow = 1.0;
         }
-        shadow /= 9; // divide by the number of the samples
     }
 
     vec3 acc = texture(in_emissive, in_uv).rgb * emissive_factor;
