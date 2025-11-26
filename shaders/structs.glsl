@@ -12,7 +12,10 @@ struct FrameData {
     uint point_light_count;
 
     vec3 sun_color;
+    float sun_bias;
     uint padding;
+
+    mat4 shadow_view_proj;
 };
 
 struct PointLight {

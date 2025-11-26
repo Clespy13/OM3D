@@ -50,13 +50,14 @@ void Scene::set_envmap(std::shared_ptr<Texture> env) {
     _envmap = std::move(env);
 }
 
-void Scene::set_sun(float altitude, float azimuth, glm::vec3 color) {
+void Scene::set_sun(float altitude, float azimuth, glm::vec3 color, float bias) {
     // Convert from degrees to radians
     const float alt = glm::radians(altitude);
     const float azi = glm::radians(azimuth);
     // Convert from polar to cartesian
     _sun_direction = glm::vec3(sin(azi) * cos(alt), sin(alt), cos(azi) * cos(alt));
     _sun_color = color;
+    _sun_bias = bias;
 }
 
 std::shared_ptr<Texture> Scene::depth_prepass_texture() const {
@@ -167,6 +168,8 @@ void Scene::render() const {
         mapping[0].point_light_count = u32(_point_lights.size());
         mapping[0].sun_color = _sun_color;
         mapping[0].sun_dir = glm::normalize(_sun_direction);
+        mapping[0].sun_bias = _sun_bias;
+        mapping[0].shadow_view_proj = _shadow_cam.view_proj_matrix();
     }
     buffer.bind(BufferUsage::Uniform, 0);
 
