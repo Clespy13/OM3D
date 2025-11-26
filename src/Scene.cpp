@@ -107,7 +107,7 @@ void Scene::shadow_pass() {
     glViewport(0, 0, shadow_map_size.x, shadow_map_size.y);
     _shadow_pass_texture = std::make_shared<Texture>(shadow_map_size, ImageFormat::Depth32_FLOAT, WrapMode::Clamp);
     glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-    glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+    glTextureParameteri(_shadow_pass_texture->handle(), GL_TEXTURE_COMPARE_FUNC, GL_GEQUAL);
     _shadow_pass_fbo = std::make_unique<Framebuffer>(_shadow_pass_texture.get());
 
     _shadow_cam = Camera();
