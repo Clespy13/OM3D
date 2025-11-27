@@ -438,7 +438,8 @@ Result<std::unique_ptr<Scene>> Scene::from_gltf(const std::string& file_name) {
                     auto metal_rough = load_texture(metal_rough_info, false);
                     auto emissive = load_texture(emissive_info, false);
 
-                    mat = std::make_shared<Material>(Material::textured_pbr_material(alpha_test, opaque || mask));
+
+                    mat = std::make_shared<Material>(Material::textured_pbr_material(alpha_test));
 
                     if(!opaque && !mask) {
                         mat->set_blend_mode(BlendMode::Alpha);
@@ -524,4 +525,3 @@ Result<std::unique_ptr<Scene>> Scene::from_gltf(const std::string& file_name) {
 }
 
 }
-

@@ -13,7 +13,7 @@ namespace OM3D {
 
 Scene::Scene() {
     _sky_material.set_program(Program::from_files("sky.frag", "screen.vert"));
-    _sky_material.set_depth_test_mode(DepthTestMode::Equal);
+    _sky_material.set_depth_test_mode(DepthTestMode::None);
 
     _depth_prepass_material.set_program(Program::from_files("prepass.frag", "basic.vert"));
     _depth_prepass_material.set_depth_test_mode(DepthTestMode::Standard);
@@ -96,7 +96,7 @@ void Scene::depth_prepass() const {
     // Render all opaque objects to depth buffer only
     _depth_prepass_fbo->bind(true, false);
     for(const SceneObject& obj : _objects) {
-        obj.render_with_material(_camera, _depth_prepass_material);
+        obj.render(_camera);
     }
 }
 
