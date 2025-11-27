@@ -26,8 +26,8 @@ struct PointLight {
     float padding;
 };
 
-const uint DebugAlbedoMode = 0;
-const uint DebugNormalMode = 1;
-const uint DebugRoughnessMode = 2;
-const uint DebugMetallicMode = 3;
-const uint DebugDepthMode = 4;
+const uint DebugAlbedoMode = 1;
+const uint DebugNormalMode = 2;
+const uint DebugRoughnessMode = 3;
+const uint DebugMetallicMode = 4;
+const uint DebugDepthMode = 5;

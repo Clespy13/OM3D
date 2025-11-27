@@ -1,6 +1,7 @@
 
 #include <glad/gl.h>
 #include "ImageFormat.h"
+#include "utils.h"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -31,6 +32,8 @@ static float exposure = 1.0;
 
 static std::unique_ptr<Scene> scene;
 static std::shared_ptr<Texture> envmap;
+
+static int debug_mode = 1;
 
 namespace OM3D {
 extern bool audit_bindings_before_draw;
@@ -239,6 +242,22 @@ void gui(ImGuiRenderer& imgui) {
 
         if(ImGui::MenuItem("GPU Profiler")) {
             open_gpu_profiler = true;
+        }
+
+        if(ImGui::BeginMenu("Debug")) {
+            if(ImGui::MenuItem("None"))
+                debug_mode = 0;
+            if(ImGui::MenuItem("Albedo"))
+                debug_mode = 1; 
+            if(ImGui::MenuItem("Normals"))
+                debug_mode = 2;
+            if(ImGui::MenuItem("Roughness"))
+                debug_mode = 3;
+            if(ImGui::MenuItem("Metalness"))
+                debug_mode = 4;
+            if(ImGui::MenuItem("Depth"))
+                debug_mode = 5;
+            ImGui::EndMenu();
         }
 
         ImGui::Separator();
@@ -500,7 +519,7 @@ int main(int argc, char** argv) {
                 renderer.main_framebuffer.bind(true, true);
 
                 light_pass_program->bind();
-                light_pass_program->set_uniform(HASH("debug_mode"), (u32)3);
+                light_pass_program->set_uniform(HASH("debug_mode"), (u32)debug_mode);
                 renderer.albedo_texture.bind(0);
                 renderer.normal_texture.bind(1);
                 draw_full_screen_triangle();

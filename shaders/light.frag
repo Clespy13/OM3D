@@ -31,6 +31,8 @@ void main() {
         out_color = vec4(vec3(roughness), 1.0);
     else if (debug_mode == DebugMetallicMode)
         out_color = vec4(vec3(metallic), 1.0);
+    else
+        out_color = vec4(0.5, 0.2, 0.4, 1.0);
 }
 
 
