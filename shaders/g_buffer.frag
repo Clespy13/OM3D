@@ -47,5 +47,5 @@ void main() {
     const float metallic = metal_rough_tex.b * metal_rough_factor.x; // as per glTF spec
 
     out_color = vec4(base_color, roughness);
-    out_normal = vec4(normal, metallic);
+    out_normal = vec4(normal * 0.5 + 0.5, metallic);
 }
