@@ -1,5 +1,6 @@
 
 #include <glad/gl.h>
+#include "ImageFormat.h"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -379,6 +380,15 @@ struct RendererState {
         if(state.size.x > 0 && state.size.y > 0) {
             state.depth_texture = Texture(size, ImageFormat::Depth32_FLOAT, WrapMode::Clamp);
             state.lit_hdr_texture = Texture(size, ImageFormat::RGBA16_FLOAT, WrapMode::Clamp);
+
+            state.albedo_texture = Texture(size, ImageFormat::RGBA8_sRGB, WrapMode::Clamp);
+            state.normal_texture = Texture(size, ImageFormat::RGBA8_UNORM, WrapMode::Clamp);
+
+            state.g_buffer_framebuffer = Framebuffer(&state.depth_texture, std::array{
+                &state.albedo_texture,
+                &state.normal_texture
+            });
+
             state.tone_mapped_texture = Texture(size, ImageFormat::RGBA8_UNORM, WrapMode::Clamp);
             state.main_framebuffer = Framebuffer(&state.depth_texture, std::array{&state.lit_hdr_texture});
             state.tone_map_framebuffer = Framebuffer(nullptr, std::array{&state.tone_mapped_texture});
@@ -393,6 +403,10 @@ struct RendererState {
     Texture lit_hdr_texture;
     Texture tone_mapped_texture;
 
+    Texture albedo_texture;
+    Texture normal_texture;
+
+    Framebuffer g_buffer_framebuffer;
     Framebuffer main_framebuffer;
     Framebuffer tone_map_framebuffer;
 };
@@ -427,6 +441,7 @@ int main(int argc, char** argv) {
     load_default_scene();
 
     auto tonemap_program = Program::from_files("tonemap.frag", "screen.vert");
+    auto light_pass_program = Program::from_files("light.frag", "screen.vert");
     RendererState renderer;
 
     for(;;) {
@@ -469,12 +484,26 @@ int main(int argc, char** argv) {
                 scene->shadow_pass();
             }
 
-            // Render the scene
+            // G-buffer render
             {
                 PROFILE_GPU("Main pass");
                 glViewport(0, 0, int(renderer.size.x), int(renderer.size.y));
-                renderer.main_framebuffer.bind(true, true);
+                renderer.g_buffer_framebuffer.bind(true, true);
                 scene->render();
+            }
+
+            // Lighting render
+            {
+                PROFILE_GPU("Light pass");
+
+                glViewport(0, 0, int(renderer.size.x), int(renderer.size.y));
+                renderer.main_framebuffer.bind(true, true);
+
+                light_pass_program->bind();
+                light_pass_program->set_uniform(HASH("debug_mode"), (u32)3);
+                renderer.albedo_texture.bind(0);
+                renderer.normal_texture.bind(1);
+                draw_full_screen_triangle();
             }
 
             // Apply a tonemap as a full screen pass
