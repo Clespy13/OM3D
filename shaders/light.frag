@@ -26,7 +26,7 @@ void main() {
     if (debug_mode == DebugAlbedoMode)
         out_color = vec4(hdr, 1.0);
     else if (debug_mode == DebugNormalMode)
-        out_color = vec4(normal * 0.5 + 0.5, 1.0);
+        out_color = vec4(normal, 1.0);
     else if (debug_mode == DebugRoughnessMode)
         out_color = vec4(vec3(roughness), 1.0);
     else if (debug_mode == DebugMetallicMode)
