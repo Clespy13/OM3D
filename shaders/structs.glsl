@@ -31,3 +31,4 @@ const uint DebugNormalMode = 2;
 const uint DebugRoughnessMode = 3;
 const uint DebugMetallicMode = 4;
 const uint DebugDepthMode = 5;
+const uint DebugPositionMode = 6;

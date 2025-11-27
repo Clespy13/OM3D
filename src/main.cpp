@@ -257,6 +257,8 @@ void gui(ImGuiRenderer& imgui) {
                 debug_mode = 4;
             if(ImGui::MenuItem("Depth"))
                 debug_mode = 5;
+            if(ImGui::MenuItem("Position"))
+                debug_mode = 6;
             ImGui::EndMenu();
         }
 
@@ -520,8 +522,12 @@ int main(int argc, char** argv) {
 
                 light_pass_program->bind();
                 light_pass_program->set_uniform(HASH("debug_mode"), (u32)debug_mode);
+                light_pass_program->set_uniform(HASH("inv_cam_view_proj"), glm::inverse(scene->camera().view_proj_matrix()));
+
                 renderer.albedo_texture.bind(0);
                 renderer.normal_texture.bind(1);
+                renderer.depth_texture.bind(2);
+
                 draw_full_screen_triangle();
             }
 
