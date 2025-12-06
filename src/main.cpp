@@ -33,7 +33,7 @@ static float exposure = 1.0;
 static std::unique_ptr<Scene> scene;
 static std::shared_ptr<Texture> envmap;
 
-static int debug_mode = 1;
+static int debug_mode = 0;
 
 namespace OM3D {
 extern bool audit_bindings_before_draw;
@@ -515,14 +515,14 @@ int main(int argc, char** argv) {
 
             // Lighting render
             {
-                PROFILE_GPU("Light pass");
+                PROFILE_GPU("Sun/Global Light pass");
 
                 glViewport(0, 0, int(renderer.size.x), int(renderer.size.y));
-                renderer.main_framebuffer.bind(true, true);
+                renderer.main_framebuffer.bind(false, true);
 
                 light_pass_program->bind();
                 light_pass_program->set_uniform(HASH("debug_mode"), (u32)debug_mode);
-                light_pass_program->set_uniform(HASH("inv_cam_view_proj"), glm::inverse(scene->camera().view_proj_matrix()));
+                scene->bind_light_pass_uniforms();
 
                 renderer.albedo_texture.bind(0);
                 renderer.normal_texture.bind(1);
@@ -531,21 +531,22 @@ int main(int argc, char** argv) {
                 draw_full_screen_triangle();
             }
 
+            // NOTE: pas de tone mapping quand on utilise un g-buffer
             // Apply a tonemap as a full screen pass
-            {
-                PROFILE_GPU("Tonemap");
-
-                renderer.tone_map_framebuffer.bind(false, true);
-                tonemap_program->bind();
-                tonemap_program->set_uniform(HASH("exposure"), exposure);
-                renderer.lit_hdr_texture.bind(0);
-                draw_full_screen_triangle();
-            }
+            // {
+            //     PROFILE_GPU("Tonemap");
+            //     renderer.tone_map_framebuffer.bind(false, true);
+            //     tonemap_program->bind();
+            //     tonemap_program->set_uniform(HASH("exposure"), exposure);
+            //     renderer.lit_hdr_texture.bind(0);
+            //     draw_full_screen_triangle();
+            // }
 
             // Blit tonemap result to screen
             {
                 PROFILE_GPU("Blit");
-                blit_to_screen(renderer.tone_mapped_texture);
+                // blit_to_screen(renderer.tone_mapped_texture);
+                blit_to_screen(renderer.lit_hdr_texture);
             }
 
             // Draw GUI on top
