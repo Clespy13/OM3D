@@ -8,7 +8,10 @@
 #include <glad/gl.h>
 
 #include <iostream>
+#include <utility>
+#include "ByteBuffer.h"
 #include "glm/matrix.hpp"
+#include "graphics.h"
 
 namespace OM3D {
 
@@ -89,6 +92,7 @@ void Scene::depth_prepass() const {
         mapping[0].camera.inv_view_proj = glm::inverse(_camera.view_proj_matrix());
         mapping[0].camera.position = _camera.position();
         mapping[0].point_light_count = u32(_point_lights.size());
+        mapping[0].ibl_intensity = _ibl_intensity;
         mapping[0].sun_color = _sun_color;
         mapping[0].sun_dir = glm::normalize(_sun_direction);
     }
@@ -139,6 +143,7 @@ void Scene::shadow_pass() {
         mapping[0].camera.inv_view_proj = glm::inverse(_shadow_cam.view_proj_matrix());
         mapping[0].camera.position = _shadow_cam.position();
         mapping[0].point_light_count = u32(_point_lights.size());
+        mapping[0].ibl_intensity = _ibl_intensity;
         mapping[0].sun_color = _sun_color;
         mapping[0].sun_dir = glm::normalize(_sun_direction);
         mapping[0].sun_bias = _sun_bias;
@@ -243,7 +248,7 @@ void Scene::render() const {
 
 }
 
-void Scene::bind_light_pass_uniforms() const
+std::pair<ByteBuffer, ByteBuffer> Scene::bind_light_pass_uniforms() const
 {
     TypedBuffer<shader::FrameData> buffer(nullptr, 1);
     {
@@ -252,6 +257,7 @@ void Scene::bind_light_pass_uniforms() const
         mapping[0].camera.inv_view_proj = glm::inverse(_camera.view_proj_matrix());
         mapping[0].camera.position = _camera.position();
         mapping[0].point_light_count = u32(_point_lights.size());
+        mapping[0].ibl_intensity = _ibl_intensity;
         mapping[0].sun_color = _sun_color;
         mapping[0].sun_dir = glm::normalize(_sun_direction);
         mapping[0].sun_bias = _sun_bias;
@@ -277,6 +283,8 @@ void Scene::bind_light_pass_uniforms() const
     _envmap->bind(4);
     brdf_lut().bind(5);
     _shadow_pass_texture->bind(6);
+
+    return std::make_pair<ByteBuffer, ByteBuffer>(std::move(buffer), std::move(light_buffer));
 }
 
 }

@@ -82,7 +82,7 @@ void main() {
 
         // NOTE: on a pas besoin de gérer l'emissive
         // vec3 acc = texture(in_emissive, in_uv).rgb * emissive_factor;
-        vec3 acc = eval_ibl(in_envmap, brdf_lut, normal, view_dir, albedo.rgb, metallic, roughness);
+        vec3 acc = eval_ibl(in_envmap, brdf_lut, normal, view_dir, albedo.rgb, metallic, roughness) * frame.ibl_intensity;
         acc += frame.sun_color * eval_brdf(normal, view_dir, frame.sun_dir, albedo.rgb, metallic, roughness) * shadow;
 
         out_color = vec4(acc, 1.0);

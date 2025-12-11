@@ -522,7 +522,7 @@ int main(int argc, char** argv) {
 
                 light_pass_program->bind();
                 light_pass_program->set_uniform(HASH("debug_mode"), (u32)debug_mode);
-                scene->bind_light_pass_uniforms();
+                auto buffers = scene->bind_light_pass_uniforms();
 
                 renderer.albedo_texture.bind(0);
                 renderer.normal_texture.bind(1);

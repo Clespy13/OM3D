@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <memory>
+#include "ByteBuffer.h"
 
 namespace OM3D {
 
@@ -21,7 +22,7 @@ class Scene : NonMovable {
         void depth_prepass() const;
         void shadow_pass();
         void render() const;
-        void bind_light_pass_uniforms() const;
+        std::pair<ByteBuffer, ByteBuffer> bind_light_pass_uniforms() const;
 
         void add_object(SceneObject obj);
         void add_light(PointLight obj);
