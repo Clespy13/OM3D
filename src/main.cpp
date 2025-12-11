@@ -411,7 +411,7 @@ struct RendererState {
             });
 
             state.tone_mapped_texture = Texture(size, ImageFormat::RGBA8_UNORM, WrapMode::Clamp);
-            state.main_framebuffer = Framebuffer(&state.depth_texture, std::array{&state.lit_hdr_texture});
+            state.main_framebuffer = Framebuffer(nullptr, std::array{&state.lit_hdr_texture});
             state.tone_map_framebuffer = Framebuffer(nullptr, std::array{&state.tone_mapped_texture});
         }
 
@@ -518,7 +518,7 @@ int main(int argc, char** argv) {
                 PROFILE_GPU("Sun/Global Light pass");
 
                 glViewport(0, 0, int(renderer.size.x), int(renderer.size.y));
-                renderer.main_framebuffer.bind(false, true);
+                renderer.main_framebuffer.bind(true, true);
 
                 light_pass_program->bind();
                 light_pass_program->set_uniform(HASH("debug_mode"), (u32)debug_mode);
