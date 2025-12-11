@@ -47,6 +47,11 @@ void Material::set_stored_uniform(u32 name_hash, UniformValue value) {
     _uniforms.emplace_back(name_hash, std::move(value));
 }
 
+void Material::set_write_depth(u32 mode)
+{
+  glDepthMask(mode);
+}
+
 void Material::bind() const {
     switch(_blend_mode) {
         case BlendMode::None:
@@ -59,6 +64,11 @@ void Material::bind() const {
         case BlendMode::Alpha:
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        break;
+
+        case BlendMode::Additive:
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_ONE, GL_ONE);
         break;
     }
 
