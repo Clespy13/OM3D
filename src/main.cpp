@@ -463,6 +463,7 @@ int main(int argc, char** argv) {
 
     auto tonemap_program = Program::from_files("tonemap.frag", "screen.vert");
     auto light_pass_program = Program::from_files("light.frag", "screen.vert");
+    auto point_light_pass_program = Program::from_files("point_light.frag", "screen.vert");
     RendererState renderer;
 
     for(;;) {
@@ -511,6 +512,13 @@ int main(int argc, char** argv) {
                 glViewport(0, 0, int(renderer.size.x), int(renderer.size.y));
                 renderer.g_buffer_framebuffer.bind(true, true);
                 scene->render();
+            }
+
+            {
+                PROFILE_GPU("Point Light pass");
+
+                glViewport(0, 0, int(renderer.size.x), int(renderer.size.y));
+                renderer.main_framebuffer.bind(false, true);
             }
 
             // Lighting render

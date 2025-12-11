@@ -287,4 +287,37 @@ std::pair<ByteBuffer, ByteBuffer> Scene::bind_light_pass_uniforms() const
     return std::make_pair<ByteBuffer, ByteBuffer>(std::move(buffer), std::move(light_buffer));
 }
 
+void Scene::point_light_pass() const
+{
+    TypedBuffer<shader::FrameData> buffer(nullptr, 1);
+    {
+        auto mapping = buffer.map(AccessType::WriteOnly);
+        mapping[0].camera.view_proj = _camera.view_proj_matrix();
+        mapping[0].camera.inv_view_proj = glm::inverse(_camera.view_proj_matrix());
+        mapping[0].camera.position = _camera.position();
+        mapping[0].point_light_count = u32(_point_lights.size());
+        mapping[0].ibl_intensity = _ibl_intensity;
+        mapping[0].sun_color = _sun_color;
+        mapping[0].sun_dir = glm::normalize(_sun_direction);
+        mapping[0].sun_bias = _sun_bias;
+        mapping[0].shadow_view_proj = _shadow_cam.view_proj_matrix();
+    }
+    buffer.bind(BufferUsage::Uniform, 0);
+
+    TypedBuffer<shader::PointLight> light_buffer(nullptr, std::max(_point_lights.size(), size_t(1)));
+    {
+        auto mapping = light_buffer.map(AccessType::WriteOnly);
+        for(size_t i = 0; i != _point_lights.size(); ++i) {
+            const auto& light = _point_lights[i];
+            mapping[i] = {
+                light.position(),
+                light.radius(),
+                light.color(),
+                0.0f
+            };
+        }
+    }
+    light_buffer.bind(BufferUsage::Storage, 1);
+}
+
 }

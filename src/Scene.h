@@ -23,6 +23,7 @@ class Scene : NonMovable {
         void shadow_pass();
         void render() const;
         std::pair<ByteBuffer, ByteBuffer> bind_light_pass_uniforms() const;
+        void point_light_pass() const;
 
         void add_object(SceneObject obj);
         void add_light(PointLight obj);
