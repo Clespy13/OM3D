@@ -54,6 +54,7 @@ class Scene : NonMovable {
         Material _sky_material;
         Material _depth_prepass_material;
         Material _shadow_pass_material;
+        Material _point_light_pass_material;
         mutable std::shared_ptr<Texture> _depth_prepass_texture;
         mutable std::unique_ptr<Framebuffer> _depth_prepass_fbo;
         mutable std::shared_ptr<Texture> _shadow_pass_texture;

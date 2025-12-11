@@ -26,6 +26,9 @@ Scene::Scene() {
     _shadow_pass_material.set_depth_test_mode(DepthTestMode::Standard);
 
     _envmap = std::make_shared<Texture>(Texture::empty_cubemap(4, ImageFormat::RGBA8_UNORM));
+
+    _point_light_pass_material.set_program(Program::from_files("point_light.frag", "screen.vert"));
+    _point_light_pass_material.set_blend_mode(BlendMode::Additive);
 }
 
 void Scene::add_object(SceneObject obj) {
@@ -318,6 +321,15 @@ void Scene::point_light_pass() const
         }
     }
     light_buffer.bind(BufferUsage::Storage, 1);
+
+    _point_light_pass_material.bind();
+    _point_light_pass_material.set_write_depth(GL_FALSE);
+
+    for(size_t i = 0; i != _point_lights.size(); ++i) {
+        _point_light_pass_material.set_uniform(HASH("index"), (u32)i);
+    }
+
+    _point_light_pass_material.set_write_depth(GL_TRUE);
 }
 
 }

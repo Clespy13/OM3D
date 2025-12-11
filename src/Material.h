@@ -32,7 +32,7 @@ class Material {
         void set_depth_test_mode(DepthTestMode depth);
         void set_double_sided(bool double_sided);
         void set_texture(u32 slot, std::shared_ptr<Texture> tex);
-        void set_write_depth(u32 mode);
+        void set_write_depth(u32 mode) const;
 
         bool is_opaque() const;
 
