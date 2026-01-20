@@ -3,6 +3,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "StaticMesh.h"
 
+#include <iostream>
+
 namespace OM3D {
 
 SceneObject::SceneObject(std::shared_ptr<StaticMesh> mesh, std::shared_ptr<Material> material) :

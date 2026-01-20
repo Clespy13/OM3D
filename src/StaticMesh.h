@@ -33,6 +33,8 @@ namespace OM3D
 
         const BoundingSphere& bounding_sphere() const;
 
+        static Result<MeshData> from_gltf(const std::string& file_name);
+
     private:
         TypedBuffer<Vertex> _vertex_buffer;
         TypedBuffer<u32> _index_buffer;

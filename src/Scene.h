@@ -25,6 +25,8 @@ class Scene : NonMovable {
         std::pair<ByteBuffer, ByteBuffer> bind_light_pass_uniforms() const;
         void point_light_pass() const;
 
+        void load_point_light_meshes();
+
         void add_object(SceneObject obj);
         void add_light(PointLight obj);
 
@@ -44,6 +46,8 @@ class Scene : NonMovable {
     private:
         std::vector<SceneObject> _objects;
         std::vector<PointLight> _point_lights;
+
+        std::vector<SceneObject> _light_spheres;
 
         glm::vec3 _sun_direction = glm::vec3(0.2f, 1.0f, 0.1f);
         glm::vec3 _sun_color = glm::vec3(1.0f);

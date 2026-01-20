@@ -3,6 +3,7 @@
 
 #include <glm/gtc/quaternion.hpp>
 
+#include <memory>
 #include <utils.h>
 
 #include <iostream>
@@ -519,9 +520,90 @@ Result<std::unique_ptr<Scene>> Scene::from_gltf(const std::string& file_name) {
         }
         scene->add_light(light);
     }
-
+    scene->load_point_light_meshes();
 
     return {true, std::move(scene)};
+}
+
+
+Result<MeshData> StaticMesh::from_gltf(const std::string& file_name) {
+    const double time = program_time();
+    DEFER(std::cout << file_name << " loaded in " << std::round((program_time() - time) * 100.0) / 100.0 << "s" << std::endl);
+
+    tinygltf::TinyGLTF ctx;
+    tinygltf::Model gltf;
+
+    {
+        std::string err;
+        std::string warn;
+
+        const bool is_ascii = ends_with(file_name, ".gltf");
+        const bool ok = is_ascii
+                ? ctx.LoadASCIIFromFile(&gltf, &err, &warn, file_name)
+                : ctx.LoadBinaryFromFile(&gltf, &err, &warn, file_name);
+
+        if(!err.empty()) {
+            std::cerr << "Error while loading gltf: " << err << std::endl;
+        }
+        if(!warn.empty()) {
+            std::cerr << "Warning while loading gltf: " << warn << std::endl;
+        }
+
+        if(!ok) {
+            return {false, {}};
+        }
+    }
+
+    std::cout << file_name << " parsed in " << std::round((program_time() - time) * 100.0) / 100.0 << "s" << std::endl;
+
+    std::unordered_map<int, glm::mat4> node_transforms;
+
+    {
+        std::vector<int> node_indices;
+        if(gltf.defaultScene >= 0) {
+            node_indices = gltf.scenes[gltf.defaultScene].nodes;
+        } else {
+            for(u32 i = 0; i != gltf.nodes.size(); ++i) {
+                node_indices.push_back(i);
+                node_transforms[i] = base_transform();
+            }
+        }
+
+        for(const int node_index : node_indices) {
+            parse_node_transforms(node_index, gltf, node_transforms);
+        }
+    }
+
+    std::vector<MeshData> meshes;
+    for(auto [node_index, node_transform] : node_transforms) {
+        const tinygltf::Node& node = gltf.nodes[node_index];
+
+        if(node.mesh < 0) {
+            continue;
+        }
+
+        const tinygltf::Mesh& mesh = gltf.meshes[node.mesh];
+
+        const std::shared_ptr<Material> default_material = std::make_shared<Material>(Material::textured_pbr_material());
+        for(size_t j = 0; j != mesh.primitives.size(); ++j) {
+            const tinygltf::Primitive& prim = mesh.primitives[j];
+
+            if(prim.mode != TINYGLTF_MODE_TRIANGLES) {
+                continue;
+            }
+
+            auto mesh = build_mesh_data(gltf, prim);
+            if (!mesh.is_ok)
+                continue;
+            meshes.push_back(mesh.value);
+        }
+    }
+
+    if (meshes.size() != 1) {
+        std::cerr << "Invalid mesh length\n" << std::endl;
+        return { false, {} };
+    }
+    return { true, meshes[0] };
 }
 
 }

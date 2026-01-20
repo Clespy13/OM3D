@@ -16,5 +16,5 @@ uniform uint index;
 
 void main() {
     PointLight light = point_lights[index];
-    out_color = vec4(0.0);
+    out_color = vec4(1.0);
 }

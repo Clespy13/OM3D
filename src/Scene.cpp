@@ -10,6 +10,9 @@
 #include <iostream>
 #include <utility>
 #include "ByteBuffer.h"
+#include "Material.h"
+#include "SceneObject.h"
+#include "StaticMesh.h"
 #include "glm/matrix.hpp"
 #include "graphics.h"
 
@@ -26,9 +29,33 @@ Scene::Scene() {
     _shadow_pass_material.set_depth_test_mode(DepthTestMode::Standard);
 
     _envmap = std::make_shared<Texture>(Texture::empty_cubemap(4, ImageFormat::RGBA8_UNORM));
+}
 
-    _point_light_pass_material.set_program(Program::from_files("point_light.frag", "screen.vert"));
-    _point_light_pass_material.set_blend_mode(BlendMode::Additive);
+void Scene::load_point_light_meshes() {
+    auto sphere_mesh = StaticMesh::from_gltf("../../data/sphere.glb");
+    if (!sphere_mesh.is_ok) {
+        std::cerr << "Unable to load sphere.glb for lighting.\n";
+        return;
+    }
+
+    Material light_material;
+    light_material.set_program(Program::from_files("point_light.frag", "screen.vert"));
+    light_material.set_blend_mode(BlendMode::Additive);
+
+    for(size_t i = 0; i != _point_lights.size(); ++i) {
+        const auto& light = _point_lights[i];
+        glm::mat4 transform = glm::mat4(1.0);
+        transform = glm::translate(transform, light.position());
+        transform = glm::scale(transform, glm::vec3(light.radius()));
+
+        auto scene_object = SceneObject(
+            std::make_shared<StaticMesh>(sphere_mesh.value),
+            std::make_shared<Material>(light_material)
+        );
+        _light_spheres.push_back(scene_object);
+    }
+
+    _point_light_pass_material.set_write_depth(GL_TRUE);
 }
 
 void Scene::add_object(SceneObject obj) {
@@ -322,14 +349,13 @@ void Scene::point_light_pass() const
     }
     light_buffer.bind(BufferUsage::Storage, 1);
 
-    _point_light_pass_material.bind();
-    _point_light_pass_material.set_write_depth(GL_FALSE);
+    Material::set_write_depth(GL_FALSE);
 
-    for(size_t i = 0; i != _point_lights.size(); ++i) {
-        _point_light_pass_material.set_uniform(HASH("index"), (u32)i);
+    for(auto light : _light_spheres) {
+        light.render(_camera);
     }
 
-    _point_light_pass_material.set_write_depth(GL_TRUE);
+    Material::set_write_depth(GL_TRUE);
 }
 
 }
