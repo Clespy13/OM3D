@@ -46,5 +46,5 @@ void main() {
     float dist_sqr = dot(light.position, position);
     float intensity = 1.0 / (0.1 + dist_sqr);
 
-    out_color = vec4(light.color * intensity, 1.0);
+    out_color = vec4(light.color * intensity, 0.0);
 }

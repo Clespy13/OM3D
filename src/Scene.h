@@ -9,6 +9,7 @@
 #include <vector>
 #include <memory>
 #include "ByteBuffer.h"
+#include "Probe.h"
 
 namespace OM3D {
 
@@ -66,6 +67,8 @@ class Scene : NonMovable {
 
         Camera _camera;
         Camera _shadow_cam;
+
+        Probe::probe_map probes;
 };
 
 }

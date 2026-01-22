@@ -57,6 +57,8 @@ void Scene::load_point_light_meshes() {
     }
 
     _point_light_pass_material.set_write_depth(GL_TRUE);
+
+    probes = Probe::generate_probes(*this);
 }
 
 void Scene::add_object(SceneObject obj) {
@@ -274,6 +276,11 @@ void Scene::render() const {
             if(!obj.material().is_opaque()) {
                 obj.render(_camera);
             }
+        }
+
+        // Probes
+        for (const auto& probe : probes) {
+            probe->render(_camera);
         }
     }
 
