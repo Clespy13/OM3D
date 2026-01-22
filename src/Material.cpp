@@ -52,6 +52,11 @@ void Material::set_write_depth(u32 mode)
   glDepthMask(mode);
 }
 
+void Material::set_backface(u32 mode)
+{
+  glCullFace(mode);
+}
+
 void Material::bind() const {
     switch(_blend_mode) {
         case BlendMode::None:

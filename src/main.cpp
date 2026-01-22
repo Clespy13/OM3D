@@ -516,6 +516,11 @@ int main(int argc, char** argv) {
             {
                 // NOTE: uses additive lighting, must not use another frame buffer
                 PROFILE_GPU("Point Light pass");
+
+                renderer.albedo_texture.bind(0);
+                renderer.normal_texture.bind(1);
+                renderer.depth_texture.bind(2);
+
                 scene->point_light_pass();
             }
 

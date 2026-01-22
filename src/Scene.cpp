@@ -46,7 +46,7 @@ void Scene::load_point_light_meshes() {
         const auto& light = _point_lights[i];
         glm::mat4 transform = glm::mat4(1.0);
         transform = glm::translate(transform, light.position());
-        transform = glm::scale(transform, glm::vec3(light.radius() * 0.1f));
+        transform = glm::scale(transform, glm::vec3(light.radius()));
 
         auto scene_object = SceneObject(
             std::make_shared<StaticMesh>(sphere_mesh.value),
@@ -351,12 +351,16 @@ void Scene::point_light_pass() const
     light_buffer.bind(BufferUsage::Storage, 1);
 
     Material::set_write_depth(GL_FALSE);
+    Material::set_backface(GL_FRONT);
 
-    for(auto light : _light_spheres) {
+    for(size_t i = 0; i < _light_spheres.size(); i++) {
+        auto light = _light_spheres[i];
+        light.material().set_uniform(HASH("index"), (u32)i);
         light.render(_camera);
     }
 
     Material::set_write_depth(GL_TRUE);
+    Material::set_backface(GL_BACK);
 }
 
 }

@@ -49,6 +49,7 @@ class Material {
         static Material textured_pbr_material(bool alpha_test = false, bool use_deffered = true);
 
         static void set_write_depth(u32 mode);
+        static void set_backface(u32 mode);
 
     private:
         std::shared_ptr<Program> _program;
