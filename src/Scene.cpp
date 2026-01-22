@@ -39,19 +39,20 @@ void Scene::load_point_light_meshes() {
     }
 
     Material light_material;
-    light_material.set_program(Program::from_files("point_light.frag", "screen.vert"));
+    light_material.set_program(Program::from_files("point_light.frag", "basic.vert"));
     light_material.set_blend_mode(BlendMode::Additive);
 
     for(size_t i = 0; i != _point_lights.size(); ++i) {
         const auto& light = _point_lights[i];
         glm::mat4 transform = glm::mat4(1.0);
         transform = glm::translate(transform, light.position());
-        transform = glm::scale(transform, glm::vec3(light.radius()));
+        transform = glm::scale(transform, glm::vec3(light.radius() * 0.1f));
 
         auto scene_object = SceneObject(
             std::make_shared<StaticMesh>(sphere_mesh.value),
             std::make_shared<Material>(light_material)
         );
+        scene_object.set_transform(transform);
         _light_spheres.push_back(scene_object);
     }
 

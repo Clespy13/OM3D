@@ -514,10 +514,8 @@ int main(int argc, char** argv) {
             }
 
             {
+                // NOTE: uses additive lighting, must not use another frame buffer
                 PROFILE_GPU("Point Light pass");
-
-                glViewport(0, 0, int(renderer.size.x), int(renderer.size.y));
-                renderer.main_framebuffer.bind(false, true);
                 scene->point_light_pass();
             }
 
