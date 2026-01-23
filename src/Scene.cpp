@@ -58,7 +58,7 @@ void Scene::load_point_light_meshes() {
 
     _point_light_pass_material.set_write_depth(GL_TRUE);
 
-    probes = Probe::generate_probes(*this);
+    _probes = std::make_shared<ProbeMap>(*this);
 }
 
 void Scene::add_object(SceneObject obj) {
@@ -191,7 +191,7 @@ void Scene::shadow_pass() {
     }
 }
 
-void Scene::render() const {
+void Scene::render(bool debug) const {
     // Get current viewport size
     int viewport[4] = {};
     glGetIntegerv(GL_VIEWPORT, viewport);
@@ -279,9 +279,8 @@ void Scene::render() const {
         }
 
         // Probes
-        for (const auto& probe : probes) {
-            probe->render(_camera);
-        }
+        if (debug)
+            _probes->render(_camera);
     }
 
 }

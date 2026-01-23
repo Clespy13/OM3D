@@ -2,31 +2,48 @@
 #define PROBE_H
 
 #include <vector>
-#include <memory>
 #include <glm/vec3.hpp>
 
 #include "SceneObject.h"
+#include "Texture.h"
 
 namespace OM3D {
 
 class Scene;
+class ProbeMap;
 
 class Probe {
     public:
-        using probe_map = std::vector<std::shared_ptr<Probe>>;
-
         Probe(glm::vec3 position);
-        void render(Camera c) const;
+        void render(const Camera &c) const;
 
         void compute_gbuffer();
         void update_irradiance();
 
-        static probe_map generate_probes(const Scene& s);
+        friend ProbeMap;
 
     private:
         glm::vec3 _position;
 
         SceneObject _sphere_mesh;
+        Texture _gbuffer;
+};
+
+class ProbeMap {
+    public:
+        using probe_data = std::vector<std::vector<std::vector<std::shared_ptr<Probe>>>>;
+
+        ProbeMap(const Scene& s);
+
+        void render(const Camera &c) const;
+        void bind(int index) const;
+
+    private:
+        probe_data _probes;
+        glm::vec3 _dim;
+
+        SceneObject _sphere_mesh;
+        Texture _gbuffer;
 };
 
 }

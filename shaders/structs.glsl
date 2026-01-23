@@ -26,6 +26,10 @@ struct PointLight {
     float padding;
 };
 
+struct Probe {
+    vec3 position;
+};
+
 const uint DebugAlbedoMode = 1;
 const uint DebugNormalMode = 2;
 const uint DebugRoughnessMode = 3;

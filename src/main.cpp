@@ -34,6 +34,7 @@ static std::unique_ptr<Scene> scene;
 static std::shared_ptr<Texture> envmap;
 
 static int debug_mode = 0;
+static bool render_probes = false;
 
 namespace OM3D {
 extern bool audit_bindings_before_draw;
@@ -245,20 +246,27 @@ void gui(ImGuiRenderer& imgui) {
         }
 
         if(ImGui::BeginMenu("Debug")) {
-            if(ImGui::MenuItem("None"))
-                debug_mode = 0;
-            if(ImGui::MenuItem("Albedo"))
-                debug_mode = 1; 
-            if(ImGui::MenuItem("Normals"))
-                debug_mode = 2;
-            if(ImGui::MenuItem("Roughness"))
-                debug_mode = 3;
-            if(ImGui::MenuItem("Metalness"))
-                debug_mode = 4;
-            if(ImGui::MenuItem("Depth"))
-                debug_mode = 5;
-            if(ImGui::MenuItem("Position"))
-                debug_mode = 6;
+            ImGui::Checkbox("Show Probes", &render_probes);
+
+            ImGui::Separator();
+
+            if (ImGui::BeginMenu("Debug G-Buffer Texture:")) {
+                if(ImGui::MenuItem("None"))
+                    debug_mode = 0;
+                if(ImGui::MenuItem("Albedo"))
+                    debug_mode = 1;
+                if(ImGui::MenuItem("Normals"))
+                    debug_mode = 2;
+                if(ImGui::MenuItem("Roughness"))
+                    debug_mode = 3;
+                if(ImGui::MenuItem("Metalness"))
+                    debug_mode = 4;
+                if(ImGui::MenuItem("Depth"))
+                    debug_mode = 5;
+                if(ImGui::MenuItem("Position"))
+                    debug_mode = 6;
+                ImGui::EndMenu();
+            }
             ImGui::EndMenu();
         }
 
@@ -510,7 +518,7 @@ int main(int argc, char** argv) {
                 PROFILE_GPU("Main pass");
                 glViewport(0, 0, int(renderer.size.x), int(renderer.size.y));
                 renderer.g_buffer_framebuffer.bind(true, true);
-                scene->render();
+                scene->render(render_probes);
             }
 
             {

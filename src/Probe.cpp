@@ -6,6 +6,9 @@
 #include "StaticMesh.h"
 
 #include "Scene.h"
+#include "TypedBuffer.h"
+#include "graphics.h"
+#include "shader_structs.h"
 
 namespace OM3D
 {
@@ -36,7 +39,7 @@ Probe::Probe(glm::vec3 position)
     _sphere_mesh.set_transform(transform);
 }
 
-void Probe::render(Camera c) const
+void Probe::render(const Camera &c) const
 {
     _sphere_mesh.render(c);
 }
@@ -51,10 +54,8 @@ void Probe::update_irradiance()
     // FIXME
 }
 
-Probe::probe_map Probe::generate_probes(const Scene& s)
+ProbeMap::ProbeMap(const Scene& s)
 {
-    probe_map probes;
-
     float min_x = std::numeric_limits<float>::infinity();
     float max_x = -std::numeric_limits<float>::infinity();
     float min_y = std::numeric_limits<float>::infinity();
@@ -77,7 +78,8 @@ Probe::probe_map Probe::generate_probes(const Scene& s)
     int z_count = (int)((max_z - min_z) / target_spacing);
 
     if (x_count == 0 || y_count == 0 || z_count == 0)
-        return probes;
+        return;
+    _dim = glm::vec3(x_count, y_count, z_count);
 
     float x_spacing = (max_x - min_x) / (float)x_count;
     float y_spacing = (max_y - min_y) / (float)y_count;
@@ -88,18 +90,57 @@ Probe::probe_map Probe::generate_probes(const Scene& s)
 
     for (float z = min_z; z <= max_z; z += z_spacing)
     {
+        std::vector<std::vector<std::shared_ptr<Probe>>> level;
         for (float y = min_y; y <= max_y; y += y_spacing)
         {
+            std::vector<std::shared_ptr<Probe>> line;
             for (float x = min_x; x <= max_x; x += x_spacing)
             {
                 auto probe = std::make_shared<Probe>(glm::vec3(x, y, z));
-                probes.push_back(std::move(probe));
+                line.push_back(probe);
+            }
+            level.push_back(line);
+        }
+
+        _probes.push_back(level);
+    }
+}
+
+void ProbeMap::render(const Camera &c) const
+{
+    if (_dim == glm::vec3(0))
+        return;
+
+    for (int z = 0; z < _dim.z; z++) {
+        for (int y = 0; y < _dim.y; y++) {
+            for (int x = 0; x < _dim.x; x++) {
+                _probes[z][y][x]->render(c);
             }
         }
     }
+}
 
-    return probes;
-    
+void ProbeMap::bind(int index) const
+{
+    int probe_count = (int)(_dim.x * _dim.y * _dim.z);
+    TypedBuffer<shader::Probe> buffer(nullptr, std::max(probe_count, 1));
+
+    int level_size = (int)(_dim.x * _dim.y);
+    int line_size = (int)_dim.x;
+    {
+        auto mapping = buffer.map(AccessType::WriteOnly);
+        for (int z = 0; z < _dim.z; z++) {
+            for (int y = 0; y < _dim.y; y++) {
+                for (int x = 0; x < _dim.x; x++) {
+                    auto& probe = _probes[z][y][x];
+                    mapping[z * level_size + y * line_size + x] = {
+                        probe->_position
+                    };
+                }
+            }
+        }
+    }
+    buffer.bind(BufferUsage::Storage, index);
 }
 
 }
