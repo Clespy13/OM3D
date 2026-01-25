@@ -47,6 +47,13 @@ const glm::mat4& SceneObject::transform() const {
     return _transform;
 }
 
+BoundingSphere SceneObject::bounding_sphere() const {
+    BoundingSphere s = _mesh->bounding_sphere();
+    s.center = glm::vec3(_transform * glm::vec4(s.center, 1.0f));
+    s.radius *= _transform[0][0];
+    return s;
+}
+
 bool SceneObject::is_visible(Camera c) const {
     Frustum f = c.build_frustum();
     BoundingSphere s = _mesh->bounding_sphere();

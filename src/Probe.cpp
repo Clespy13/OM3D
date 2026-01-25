@@ -64,22 +64,28 @@ ProbeMap::ProbeMap(const Scene& s)
     float min_z = std::numeric_limits<float>::infinity();
     float max_z = -std::numeric_limits<float>::infinity();
     for (auto obj : s.objects()) {
-        min_x = std::min(min_x, obj.transform()[3][0]);
-        max_x = std::max(max_x, obj.transform()[3][0]);
-        min_y = std::min(min_y, obj.transform()[3][1]);
-        max_y = std::max(max_y, obj.transform()[3][1]);
-        min_z = std::min(min_z, obj.transform()[3][2]);
-        max_z = std::max(max_z, obj.transform()[3][2]);
+        BoundingSphere s = obj.bounding_sphere();
+        min_x = std::min(min_x, (s.center - s.radius).x);
+        max_x = std::max(max_x, (s.center - s.radius).x);
+        min_y = std::min(min_y, (s.center - s.radius).y);
+        max_y = std::max(max_y, (s.center - s.radius).y);
+        min_z = std::min(min_z, (s.center - s.radius).z);
+        max_z = std::max(max_z, (s.center - s.radius).z);
     }
 
-    float target_spacing = 5.0f;
+    float max_size = std::max(max_x - min_x, std::max(max_y - min_y, max_z - min_z));
+    if (max_size == 0)
+        return;
+
+    int target_spacing = (max_size > 128) ? (int)(max_size / 128) + 2 : 3;
 
     int x_count = (int)((max_x - min_x) / target_spacing);
     int y_count = (int)((max_y - min_y) / target_spacing);
     int z_count = (int)((max_z - min_z) / target_spacing);
 
-    if (x_count == 0 || y_count == 0 || z_count == 0)
+    if (x_count <= 0 || y_count <= 0 || z_count <= 0)
         return;
+
     _dim = glm::vec3(x_count, y_count, z_count);
 
     float x_spacing = (max_x - min_x) / (float)x_count;
@@ -87,24 +93,32 @@ ProbeMap::ProbeMap(const Scene& s)
     float z_spacing = (max_z - min_z) / (float)z_count;
 
     std::cout << "Rendering grid of " << x_count << "x" << y_count << "x"
-              << z_count << " probes\n";
+              << z_count << " probes...\n";
 
-    for (float z = min_z; z <= max_z; z += z_spacing)
+    int counter = 0;
+    int total = x_count * y_count * z_count;
+    for (float z = 0; z < z_count; z++)
     {
         std::vector<std::vector<std::shared_ptr<Probe>>> level;
-        for (float y = min_y; y <= max_y; y += y_spacing)
+        for (float y = 0; y < y_count; y++)
         {
             std::vector<std::shared_ptr<Probe>> line;
-            for (float x = min_x; x <= max_x; x += x_spacing)
+            for (float x = 0; x < x_count; x++)
             {
-                auto probe = std::make_shared<Probe>(glm::vec3(x, y, z));
+                auto probe = std::make_shared<Probe>(
+                    glm::vec3(x * x_spacing + min_x, y * y_spacing + min_y, z * z_spacing + min_z)
+                );
                 line.push_back(probe);
+
+                std::cout << "\x1b[2K\r" << ++counter << " / " << total << std::flush;
             }
             level.push_back(line);
         }
 
         _probes.push_back(level);
     }
+
+    std::cout << "\nRendering done.\n";
 }
 
 void ProbeMap::render(const Camera &c) const

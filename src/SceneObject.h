@@ -24,6 +24,8 @@ class SceneObject {
         void set_transform(const glm::mat4& tr);
         const glm::mat4& transform() const;
 
+        BoundingSphere bounding_sphere() const;
+
     private:
         bool is_visible(Camera c) const;
 
