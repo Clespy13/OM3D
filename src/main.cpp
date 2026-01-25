@@ -1,6 +1,5 @@
 
 #include <cstdint>
-#include <fstream>
 #include <glad/gl.h>
 #include <sys/types.h>
 
@@ -660,9 +659,7 @@ int main(int argc, char** argv)
                 // Re-bake a batch of probes each frame (placeholder clears
                 // shared arrays)
                 if (scene->probes())
-                {
-                    scene->probes()->bake_batch();
-                }
+                    scene->bake_probes();
             }
 
             {

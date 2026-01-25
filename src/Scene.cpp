@@ -11,8 +11,10 @@
 #include <utility>
 #include "ByteBuffer.h"
 #include "Material.h"
+#include "Program.h"
 #include "SceneObject.h"
 #include "StaticMesh.h"
+#include "glm/ext/vector_float3.hpp"
 #include "glm/matrix.hpp"
 #include "graphics.h"
 
@@ -289,6 +291,58 @@ void Scene::render(bool debug) const {
 
 }
 
+
+void Scene::render_cube(const Camera& c, const Material& m) const
+{
+    // Get current viewport size
+    int viewport[4] = {};
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    const glm::uvec2 viewport_size(viewport[2], viewport[3]);
+
+    // Save the current framebuffer
+    GLint previous_fbo = 0;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previous_fbo);
+
+    // Fill and bind frame data buffer
+    TypedBuffer<shader::FrameData> buffer(nullptr, 1);
+    {
+        auto mapping = buffer.map(AccessType::WriteOnly);
+        mapping[0].camera.view_proj = c.view_proj_matrix();
+        mapping[0].camera.inv_view_proj = glm::inverse(c.view_proj_matrix());
+        mapping[0].camera.position = c.position();
+        mapping[0].point_light_count = u32(_point_lights.size());
+        mapping[0].sun_color = _sun_color;
+        mapping[0].sun_dir = glm::normalize(_sun_direction);
+        mapping[0].ibl_intensity = _ibl_intensity;
+        mapping[0].sun_bias = _sun_bias;
+        mapping[0].shadow_view_proj = _shadow_cam.view_proj_matrix();
+    }
+    buffer.bind(BufferUsage::Uniform, 0);
+
+    // Render the sky
+    _sky_material.bind();
+    _sky_material.set_uniform(HASH("intensity"), _ibl_intensity);
+    draw_full_screen_triangle();
+
+    // Render every object
+    {
+        // Opaque first
+        for(const SceneObject& obj : _objects) {
+            if(obj.material().is_opaque()) {
+                obj.render_with_material(c, m);
+            }
+        }
+
+        // Transparent after
+        for(const SceneObject& obj : _objects) {
+            if(!obj.material().is_opaque()) {
+                obj.render_with_material(c, m);
+            }
+        }
+    }
+
+}
+
 std::pair<ByteBuffer, ByteBuffer> Scene::bind_light_pass_uniforms() const
 {
     TypedBuffer<shader::FrameData> buffer(nullptr, 1);
@@ -371,6 +425,11 @@ void Scene::point_light_pass() const
 
     Material::set_write_depth(GL_TRUE);
     Material::set_backface(GL_BACK);
+}
+
+void Scene::bake_probes()
+{
+    _probes->bake_batch(*this);
 }
 
 }

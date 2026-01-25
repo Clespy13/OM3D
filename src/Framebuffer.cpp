@@ -71,6 +71,35 @@ Framebuffer::Framebuffer(Texture* depth, Texture** colors, size_t count) : _hand
     ALWAYS_ASSERT(glCheckNamedFramebufferStatus(_handle.get(), GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE, "Invalid framebuffer");
 }
 
+Framebuffer::Framebuffer(Texture* depth, Texture** colors, size_t count, int layer) : _handle(create_framebuffer_handle()) {
+    if(depth) {
+        glNamedFramebufferTextureLayer(_handle.get(), GL_DEPTH_ATTACHMENT, depth->_handle.get(), 0, layer);
+        _size = depth->size();
+    }
+
+    ALWAYS_ASSERT(count <= 8, "Too many render targets");
+
+    for(size_t i = 0; i != count; ++i) {
+        DEBUG_ASSERT(colors[i]);
+        glNamedFramebufferTextureLayer(_handle.get(), GLenum(GL_COLOR_ATTACHMENT0 + i), colors[i]->_handle.get(), 0, layer);
+        _size = colors[i]->size();
+    }
+
+    const GLenum draw_buffers[] = {
+        GL_COLOR_ATTACHMENT0,
+        GL_COLOR_ATTACHMENT1,
+        GL_COLOR_ATTACHMENT2,
+        GL_COLOR_ATTACHMENT3,
+        GL_COLOR_ATTACHMENT4,
+        GL_COLOR_ATTACHMENT5,
+        GL_COLOR_ATTACHMENT6,
+        GL_COLOR_ATTACHMENT7
+    };
+    glNamedFramebufferDrawBuffers(_handle.get(), GLsizei(count), draw_buffers);
+
+    ALWAYS_ASSERT(glCheckNamedFramebufferStatus(_handle.get(), GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE, "Invalid framebuffer");
+}
+
 Framebuffer::~Framebuffer() {
     if(u32 handle = _handle.get()) {
         glDeleteFramebuffers(1, &handle);

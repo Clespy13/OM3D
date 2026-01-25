@@ -19,7 +19,6 @@ namespace OM3D
         Probe(glm::vec3 position);
         void render(const Camera& c, glm::vec3 grid_index) const;
 
-        void compute_gbuffer();
         void update_irradiance();
 
         friend ProbeMap;
@@ -41,7 +40,7 @@ namespace OM3D
         void render(const Camera& c) const;
         void bind(int index) const;
 
-        void bake_batch() const;
+        void bake_batch(const Scene& s);
 
         glm::uvec3 dim() const
         {

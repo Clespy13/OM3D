@@ -43,6 +43,7 @@ class Camera {
 
         float fov() const;
         float ratio() const;
+        float near() const;
 
         Frustum build_frustum() const;
 

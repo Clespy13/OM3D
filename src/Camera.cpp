@@ -125,6 +125,10 @@ float Camera::ratio() const {
     return extract_ratio(_projection);
 }
 
+float Camera::near() const {
+    return extract_near(_projection);
+}
+
 void Camera::update() {
     _view_proj = _projection * _view;
 }

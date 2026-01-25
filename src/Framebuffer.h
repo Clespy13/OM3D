@@ -14,6 +14,9 @@ class Framebuffer : NonCopyable {
         template<size_t N>
         Framebuffer(Texture* depth, std::array<Texture*, N> colors) : Framebuffer(depth, colors.data(), colors.size()) {
         }
+        template<size_t N>
+        Framebuffer(Texture* depth, std::array<Texture*, N> colors, int layer) : Framebuffer(depth, colors.data(), colors.size(), layer) {
+        }
 
 
         Framebuffer();
@@ -31,6 +34,7 @@ class Framebuffer : NonCopyable {
 
     private:
         Framebuffer(Texture* depth, Texture** colors, size_t count);
+        Framebuffer(Texture* depth, Texture** colors, size_t count, int layer);
 
         GLHandle _handle;
         glm::uvec2 _size = {};

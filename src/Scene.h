@@ -23,6 +23,8 @@ class Scene : NonMovable {
         void depth_prepass() const;
         void shadow_pass();
         void render(bool debug=false) const;
+        void render_cube(const Camera& c, const Material& m) const;
+
         std::pair<ByteBuffer, ByteBuffer> bind_light_pass_uniforms() const;
         void point_light_pass() const;
 
@@ -35,6 +37,7 @@ class Scene : NonMovable {
         Span<const PointLight> point_lights() const;
 
         std::shared_ptr<const ProbeMap> probes() const;
+        void bake_probes();
 
         Camera& camera();
         const Camera& camera() const;
