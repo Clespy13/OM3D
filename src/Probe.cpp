@@ -37,6 +37,8 @@ Probe::Probe(glm::vec3 position)
     transform = glm::translate(transform, position);
     transform = glm::scale(transform, glm::vec3(0.2f));
     _sphere_mesh.set_transform(transform);
+
+    _gbuffer = Texture::empty_cubemap(256, ImageFormat::RGBA8_sRGB);
 }
 
 void Probe::render(const Camera &c, glm::vec3 grid_index) const

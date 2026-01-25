@@ -400,8 +400,9 @@ void gui(ImGuiRenderer& imgui) {
         ImGui::Begin("Probe G-Buffer");
         ImGui::Text("Probe at index: %d, %d, %d", debug_probe_index.x, debug_probe_index.y, debug_probe_index.z);
         auto& tex = scene->probes()->get_gbuffer(debug_probe_index.x, debug_probe_index.y, debug_probe_index.z);
+        tex.bind(0);
         auto size = tex.size();
-        ImGui::Image((ImTextureID)(intptr_t)tex.handle(), ImVec2(size.x, size.y));
+        ImGui::Image((ImTextureID)(intptr_t)&tex, ImVec2(size.x, size.y));
         ImGui::End();
     }
 }
