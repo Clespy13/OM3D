@@ -25,6 +25,7 @@ struct ImageFormatGL {
 };
 
 ImageFormatGL image_format_to_gl(ImageFormat format);
+size_t image_format_to_size(ImageFormat format);
 
 }
 

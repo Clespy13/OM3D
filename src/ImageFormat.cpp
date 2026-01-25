@@ -18,4 +18,23 @@ ImageFormatGL image_format_to_gl(ImageFormat format) {
     FATAL("Unknown image format");
 }
 
+size_t image_format_to_size(ImageFormat format) {
+    switch(format) {
+        case ImageFormat::RGBA8_UNORM:
+        case ImageFormat::RGBA8_sRGB:
+            return sizeof(char) * 4;
+        case ImageFormat::RGB8_UNORM:
+        case ImageFormat::RGB8_sRGB:
+            return sizeof(char) * 3;
+        case ImageFormat::RG16_UNORM:
+            return sizeof(short) * 2;
+        case ImageFormat::RGBA16_FLOAT:
+            return sizeof(short) * 4;
+        case ImageFormat::Depth32_FLOAT:
+            return sizeof(float);
+    }
+
+    FATAL("Unknown image format");
+}
+
 }

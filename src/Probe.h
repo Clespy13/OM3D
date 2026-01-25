@@ -15,7 +15,7 @@ class ProbeMap;
 class Probe {
     public:
         Probe(glm::vec3 position);
-        void render(const Camera &c) const;
+        void render(const Camera &c, glm::vec3 grid_index) const;
 
         void compute_gbuffer();
         void update_irradiance();
@@ -37,6 +37,8 @@ class ProbeMap {
 
         void render(const Camera &c) const;
         void bind(int index) const;
+
+        const Texture& get_gbuffer(int x, int y, int z) const;
 
     private:
         probe_data _probes;

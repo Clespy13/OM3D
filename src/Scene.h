@@ -34,6 +34,8 @@ class Scene : NonMovable {
         Span<const SceneObject> objects() const;
         Span<const PointLight> point_lights() const;
 
+        std::shared_ptr<const ProbeMap> probes() const;
+
         Camera& camera();
         const Camera& camera() const;
 

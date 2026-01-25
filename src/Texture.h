@@ -57,6 +57,8 @@ class Texture {
 
         u32 handle() const;
 
+        std::vector<unsigned char> data() const;
+
         static u32 mip_levels(glm::uvec2 size);
 
     private:

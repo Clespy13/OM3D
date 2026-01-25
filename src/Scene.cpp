@@ -77,6 +77,10 @@ Span<const PointLight> Scene::point_lights() const {
     return _point_lights;
 }
 
+std::shared_ptr<const ProbeMap> Scene::probes() const {
+    return _probes;
+}
+
 Camera& Scene::camera() {
     return _camera;
 }

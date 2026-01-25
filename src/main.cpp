@@ -1,6 +1,10 @@
 
+#include <cstdint>
+#include <fstream>
 #include <glad/gl.h>
+#include <sys/types.h>
 #include "ImageFormat.h"
+#include "glm/ext/vector_uint3.hpp"
 #include "utils.h"
 
 #define GLFW_INCLUDE_NONE
@@ -32,9 +36,11 @@ static float exposure = 1.0;
 
 static std::unique_ptr<Scene> scene;
 static std::shared_ptr<Texture> envmap;
+static std::shared_ptr<Texture> id_texture;
 
 static int debug_mode = 0;
 static bool render_probes = false;
+static glm::uvec3 debug_probe_index = glm::uvec3(-1);
 
 namespace OM3D {
 extern bool audit_bindings_before_draw;
@@ -100,26 +106,40 @@ void process_inputs(GLFWwindow* window, Camera& camera) {
             speed *= 10.0f;
         }
 
-        if(movement.length() > 0.0f) {
+        if(glm::length(movement) > 0.0f) {
             const glm::vec3 new_pos = camera.position() + movement * delta_time * speed;
             camera.set_view(glm::lookAt(new_pos, new_pos + camera.forward(), camera.up()));
         }
     }
 
+    int width = 0;
+    int height = 0;
+    glfwGetWindowSize(window, &width, &height);
+    camera.set_ratio(float(width) / float(height));
+
+
     if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
         const glm::vec2 delta = glm::vec2(mouse_pos - new_mouse_pos) * 0.01f;
-        if(delta.length() > 0.0f) {
+        if(glm::length(delta) > 0.0f) {
             glm::mat4 rot = glm::rotate(glm::mat4(1.0f), delta.x, glm::vec3(0.0f, 1.0f, 0.0f));
             rot = glm::rotate(rot, delta.y, camera.right());
             camera.set_view(glm::lookAt(camera.position(), camera.position() + (glm::mat3(rot) * camera.forward()), (glm::mat3(rot) * camera.up())));
         }
-    }
+        else {
+            int px = (int)mouse_pos.x;
+            int py = (int)(height - mouse_pos.y);
+            int pixel_index = (py * width + px) * 3;
+            auto data = id_texture->data();
+            int x = data[pixel_index];
+            int y = data[pixel_index + 1];
+            int z = data[pixel_index + 2];
 
-    {
-        int width = 0;
-        int height = 0;
-        glfwGetWindowSize(window, &width, &height);
-        camera.set_ratio(float(width) / float(height));
+            // Clear color
+            if (x == 128 && y == 178 && z == 204)
+                debug_probe_index = glm::uvec3(-1);
+            else
+                debug_probe_index = glm::uvec3(x, y, z);
+        }
     }
 
     mouse_pos = new_mouse_pos;
@@ -374,6 +394,16 @@ void gui(ImGuiRenderer& imgui) {
         }
         ImGui::End();
     }
+
+    if (debug_probe_index != glm::uvec3(-1))
+    {
+        ImGui::Begin("Probe G-Buffer");
+        ImGui::Text("Probe at index: %d, %d, %d", debug_probe_index.x, debug_probe_index.y, debug_probe_index.z);
+        auto& tex = scene->probes()->get_gbuffer(debug_probe_index.x, debug_probe_index.y, debug_probe_index.z);
+        auto size = tex.size();
+        ImGui::Image((ImTextureID)(intptr_t)tex.handle(), ImVec2(size.x, size.y));
+        ImGui::End();
+    }
 }
 
 
@@ -415,7 +445,8 @@ struct RendererState {
 
             state.g_buffer_framebuffer = Framebuffer(&state.depth_texture, std::array{
                 &state.albedo_texture,
-                &state.normal_texture
+                &state.normal_texture,
+                id_texture.get()
             });
 
             state.tone_mapped_texture = Texture(size, ImageFormat::RGBA8_UNORM, WrapMode::Clamp);
@@ -487,6 +518,7 @@ int main(int argc, char** argv) {
             glfwGetWindowSize(window, &width, &height);
 
             if(renderer.size != glm::uvec2(width, height)) {
+                id_texture = std::make_shared<Texture>(glm::uvec2(width, height), ImageFormat::RGB8_UNORM, WrapMode::Clamp);
                 renderer = RendererState::create(glm::uvec2(width, height));
             }
         }
@@ -579,6 +611,7 @@ int main(int argc, char** argv) {
     // destroy scene and child OpenGL objects
     scene = nullptr;
     envmap = nullptr;
+    id_texture = nullptr;
     imgui = nullptr;
     tonemap_program = nullptr;
     renderer = {};

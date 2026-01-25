@@ -39,8 +39,9 @@ Probe::Probe(glm::vec3 position)
     _sphere_mesh.set_transform(transform);
 }
 
-void Probe::render(const Camera &c) const
+void Probe::render(const Camera &c, glm::vec3 grid_index) const
 {
+    _sphere_mesh.material().set_uniform(HASH("grid_index"), grid_index);
     _sphere_mesh.render(c);
 }
 
@@ -114,7 +115,9 @@ void ProbeMap::render(const Camera &c) const
     for (int z = 0; z < _dim.z; z++) {
         for (int y = 0; y < _dim.y; y++) {
             for (int x = 0; x < _dim.x; x++) {
-                _probes[z][y][x]->render(c);
+                _probes[z][y][x]->render(c, glm::vec3(
+                    (float)x / 255.0f, (float)y / 255.0f, (float)z / 255.0f)
+                );
             }
         }
     }
@@ -141,6 +144,12 @@ void ProbeMap::bind(int index) const
         }
     }
     buffer.bind(BufferUsage::Storage, index);
+}
+
+const Texture& ProbeMap::get_gbuffer(int x, int y, int z) const
+{
+    auto probe = _probes[z][y][x];
+    return probe->_gbuffer;
 }
 
 }

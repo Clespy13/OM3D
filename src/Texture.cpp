@@ -1,4 +1,5 @@
 #include "Texture.h"
+#include "ImageFormat.h"
 #include "Program.h"
 #include "graphics.h"
 
@@ -156,6 +157,15 @@ glm::uvec2 Texture::size() const {
 
 u32 Texture::handle() const {
     return _handle.get();
+}
+
+std::vector<unsigned char> Texture::data() const
+{
+    // TODO: replace with PBO if it causes performances issues
+    std::vector<unsigned char> res(_size.x * _size.y * image_format_to_size(_format));
+    glBindTexture(GL_TEXTURE_2D, _handle.get());
+    glGetTexImage(GL_TEXTURE_2D, 0, image_format_to_gl(_format).format, GL_UNSIGNED_BYTE, res.data());
+    return res;
 }
 
 // Return number of mip levels needed
