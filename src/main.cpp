@@ -3,28 +3,25 @@
 #include <fstream>
 #include <glad/gl.h>
 #include <sys/types.h>
+
 #include "ImageFormat.h"
 #include "glm/ext/vector_uint3.hpp"
 #include "utils.h"
 
 #define GLFW_INCLUDE_NONE
+#include <Framebuffer.h>
 #include <GLFW/glfw3.h>
-
-#include <graphics.h>
+#include <ImGuiRenderer.h>
 #include <Scene.h>
 #include <Texture.h>
-#include <Framebuffer.h>
 #include <TimestampQuery.h>
-#include <ImGuiRenderer.h>
-
+#include <filesystem>
+#include <graphics.h>
 #include <imgui/imgui.h>
-
 #include <iostream>
 #include <vector>
-#include <filesystem>
 
 using namespace OM3D;
-
 
 static float delta_time = 0.0f;
 static float sun_altitude = 45.0;
@@ -42,24 +39,32 @@ static int debug_mode = 0;
 static bool render_probes = false;
 static glm::uvec3 debug_probe_index = glm::uvec3(-1);
 
-namespace OM3D {
-extern bool audit_bindings_before_draw;
+namespace OM3D
+{
+    extern bool audit_bindings_before_draw;
 }
 
-void parse_args(int argc, char** argv) {
-    for(int i = 1; i < argc; ++i) {
+void parse_args(int argc, char** argv)
+{
+    for (int i = 1; i < argc; ++i)
+    {
         const std::string_view arg = argv[i];
 
-        if(arg == "--validate") {
+        if (arg == "--validate")
+        {
             OM3D::audit_bindings_before_draw = true;
-        } else {
+        }
+        else
+        {
             std::cerr << "Unknown argument \"" << arg << "\"" << std::endl;
         }
     }
 }
 
-void glfw_check(bool cond) {
-    if(!cond) {
+void glfw_check(bool cond)
+{
+    if (!cond)
+    {
         const char* err = nullptr;
         glfwGetError(&err);
         std::cerr << "GLFW error: " << err << std::endl;
@@ -67,14 +72,16 @@ void glfw_check(bool cond) {
     }
 }
 
-void update_delta_time() {
+void update_delta_time()
+{
     static double time = 0.0;
     const double new_time = program_time();
     delta_time = float(new_time - time);
     time = new_time;
 }
 
-void process_inputs(GLFWwindow* window, Camera& camera) {
+void process_inputs(GLFWwindow* window, Camera& camera)
+{
     static glm::dvec2 mouse_pos;
 
     glm::dvec2 new_mouse_pos;
@@ -82,33 +89,43 @@ void process_inputs(GLFWwindow* window, Camera& camera) {
 
     {
         glm::vec3 movement = {};
-        if(glfwGetKey(window, 'W') == GLFW_PRESS) {
+        if (glfwGetKey(window, 'W') == GLFW_PRESS)
+        {
             movement += camera.forward();
         }
-        if(glfwGetKey(window, 'S') == GLFW_PRESS) {
+        if (glfwGetKey(window, 'S') == GLFW_PRESS)
+        {
             movement -= camera.forward();
         }
-        if(glfwGetKey(window, 'D') == GLFW_PRESS) {
+        if (glfwGetKey(window, 'D') == GLFW_PRESS)
+        {
             movement += camera.right();
         }
-        if(glfwGetKey(window, 'A') == GLFW_PRESS) {
+        if (glfwGetKey(window, 'A') == GLFW_PRESS)
+        {
             movement -= camera.right();
         }
-        if(glfwGetKey(window, 'E') == GLFW_PRESS) {
+        if (glfwGetKey(window, 'E') == GLFW_PRESS)
+        {
             movement += camera.up();
         }
-        if(glfwGetKey(window, 'Q') == GLFW_PRESS) {
+        if (glfwGetKey(window, 'Q') == GLFW_PRESS)
+        {
             movement -= camera.up();
         }
 
         float speed = 10.0f;
-        if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+        {
             speed *= 10.0f;
         }
 
-        if(glm::length(movement) > 0.0f) {
-            const glm::vec3 new_pos = camera.position() + movement * delta_time * speed;
-            camera.set_view(glm::lookAt(new_pos, new_pos + camera.forward(), camera.up()));
+        if (glm::length(movement) > 0.0f)
+        {
+            const glm::vec3 new_pos =
+                camera.position() + movement * delta_time * speed;
+            camera.set_view(
+                glm::lookAt(new_pos, new_pos + camera.forward(), camera.up()));
         }
     }
 
@@ -117,15 +134,21 @@ void process_inputs(GLFWwindow* window, Camera& camera) {
     glfwGetWindowSize(window, &width, &height);
     camera.set_ratio(float(width) / float(height));
 
-
-    if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+    {
         const glm::vec2 delta = glm::vec2(mouse_pos - new_mouse_pos) * 0.01f;
-        if(glm::length(delta) > 0.0f) {
-            glm::mat4 rot = glm::rotate(glm::mat4(1.0f), delta.x, glm::vec3(0.0f, 1.0f, 0.0f));
+        if (glm::length(delta) > 0.0f)
+        {
+            glm::mat4 rot = glm::rotate(glm::mat4(1.0f), delta.x,
+                                        glm::vec3(0.0f, 1.0f, 0.0f));
             rot = glm::rotate(rot, delta.y, camera.right());
-            camera.set_view(glm::lookAt(camera.position(), camera.position() + (glm::mat3(rot) * camera.forward()), (glm::mat3(rot) * camera.up())));
+            camera.set_view(glm::lookAt(
+                camera.position(),
+                camera.position() + (glm::mat3(rot) * camera.forward()),
+                (glm::mat3(rot) * camera.up())));
         }
-        else {
+        else
+        {
             int px = (int)mouse_pos.x;
             int py = (int)(height - mouse_pos.y);
             int pixel_index = (py * width + px) * 3;
@@ -145,38 +168,53 @@ void process_inputs(GLFWwindow* window, Camera& camera) {
     mouse_pos = new_mouse_pos;
 }
 
-void load_envmap(const std::string& filename) {
-    if(auto res = TextureData::from_file(filename); res.is_ok) {
-        envmap = std::make_shared<Texture>(Texture::cubemap_from_equirec(res.value));
+void load_envmap(const std::string& filename)
+{
+    if (auto res = TextureData::from_file(filename); res.is_ok)
+    {
+        envmap =
+            std::make_shared<Texture>(Texture::cubemap_from_equirec(res.value));
         scene->set_envmap(envmap);
-    } else {
+    }
+    else
+    {
         std::cerr << "Unable to load envmap (" << filename << ")" << std::endl;
     }
 }
 
-void load_scene(const std::string& filename) {
-    if(auto res = Scene::from_gltf(filename); res.is_ok) {
+void load_scene(const std::string& filename)
+{
+    if (auto res = Scene::from_gltf(filename); res.is_ok)
+    {
         scene = std::move(res.value);
         scene->set_envmap(envmap);
         scene->set_ibl_intensity(ibl_intensity);
         scene->set_sun(sun_altitude, sun_azimuth, glm::vec3(sun_intensity));
-    } else {
+    }
+    else
+    {
         std::cerr << "Unable to load scene (" << filename << ")" << std::endl;
     }
 }
 
-std::vector<std::string> list_data_files(Span<const std::string> extensions = {}) {
+std::vector<std::string>
+list_data_files(Span<const std::string> extensions = {})
+{
     std::vector<std::string> files;
-    for(auto&& entry : std::filesystem::directory_iterator(data_path)) {
-        if(entry.status().type() == std::filesystem::file_type::regular) {
+    for (auto&& entry : std::filesystem::directory_iterator(data_path))
+    {
+        if (entry.status().type() == std::filesystem::file_type::regular)
+        {
             const auto ext = entry.path().extension();
 
             bool ext_match = extensions.is_empty();
-            for(const std::string& e : extensions) {
+            for (const std::string& e : extensions)
+            {
                 ext_match |= (ext == e);
             }
 
-            if(ext_match) {
+            if (ext_match)
+            {
                 files.emplace_back(entry.path().string());
             }
         }
@@ -184,18 +222,24 @@ std::vector<std::string> list_data_files(Span<const std::string> extensions = {}
     return files;
 }
 
-template<typename F>
-bool load_file_window(Span<std::string> files, F&& load_func) {
+template <typename F>
+bool load_file_window(Span<std::string> files, F&& load_func)
+{
     char buffer[1024] = {};
-    if(ImGui::InputText("Load file", buffer, sizeof(buffer), ImGuiInputTextFlags_EnterReturnsTrue)) {
+    if (ImGui::InputText("Load file", buffer, sizeof(buffer),
+                         ImGuiInputTextFlags_EnterReturnsTrue))
+    {
         load_func(buffer);
         return true;
     }
 
-    if(!files.is_empty()) {
-        for(const std::string& p : files) {
+    if (!files.is_empty())
+    {
+        for (const std::string& p : files)
+        {
             const auto abs = std::filesystem::absolute(p).string();
-            if(ImGui::MenuItem(abs.c_str())) {
+            if (ImGui::MenuItem(abs.c_str()))
+            {
                 load_func(p);
                 return true;
             }
@@ -205,7 +249,8 @@ bool load_file_window(Span<std::string> files, F&& load_func) {
     return false;
 }
 
-void gui(ImGuiRenderer& imgui) {
+void gui(ImGuiRenderer& imgui)
+{
     const ImVec4 error_text_color = ImVec4(1.0f, 0.3f, 0.3f, 1.0f);
     const ImVec4 warning_text_color = ImVec4(1.0f, 0.8f, 0.4f, 1.0f);
 
@@ -216,74 +261,97 @@ void gui(ImGuiRenderer& imgui) {
     imgui.start();
     DEFER(imgui.finish());
 
-
     static std::vector<std::string> load_files;
 
     // ImGui::ShowDemoWindow();
 
     bool open_scene_popup = false;
     bool load_envmap_popup = false;
-    if(ImGui::BeginMainMenuBar()) {
-        if(ImGui::BeginMenu("File")) {
-            if(ImGui::MenuItem("Open Scene")) {
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Open Scene"))
+            {
                 open_scene_popup = true;
             }
-            if(ImGui::MenuItem("Open Envmap")) {
+            if (ImGui::MenuItem("Open Envmap"))
+            {
                 load_envmap_popup = true;
             }
             ImGui::EndMenu();
         }
 
-        if(ImGui::BeginMenu("Lighting")) {
-            ImGui::DragFloat("Exposure", &exposure, 0.01f, 0.01f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+        if (ImGui::BeginMenu("Lighting"))
+        {
+            ImGui::DragFloat("Exposure", &exposure, 0.01f, 0.01f, 10.0f, "%.2f",
+                             ImGuiSliderFlags_Logarithmic);
 
             ImGui::Separator();
 
-            ImGui::DragFloat("IBL intensity", &ibl_intensity, 0.01f, 0.0f, 1.0f);
+            ImGui::DragFloat("IBL intensity", &ibl_intensity, 0.01f, 0.0f,
+                             1.0f);
             scene->set_ibl_intensity(ibl_intensity);
 
             ImGui::Separator();
 
-            bool update_sun = ImGui::DragFloat("Sun Altitude", &sun_altitude, 0.1f, 0.0f, 90.0f, "%.0f");
-            update_sun |= ImGui::DragFloat("Sun Azimuth", &sun_azimuth, 0.1f, 0.0f, 360.0f, "%.0f");
-            update_sun |= ImGui::DragFloat("Sun Intensity", &sun_intensity, 0.05f, 0.0f, 100.0f, "%.1f");
-            update_sun |= ImGui::DragFloat("Sun Bias", &sun_bias, 0.1f, 0.01f, 100.0f, "%.1f");
+            bool update_sun = ImGui::DragFloat("Sun Altitude", &sun_altitude,
+                                               0.1f, 0.0f, 90.0f, "%.0f");
+            update_sun |= ImGui::DragFloat("Sun Azimuth", &sun_azimuth, 0.1f,
+                                           0.0f, 360.0f, "%.0f");
+            update_sun |= ImGui::DragFloat("Sun Intensity", &sun_intensity,
+                                           0.05f, 0.0f, 100.0f, "%.1f");
+            update_sun |= ImGui::DragFloat("Sun Bias", &sun_bias, 0.1f, 0.01f,
+                                           100.0f, "%.1f");
 
             if (update_sun)
-                scene->set_sun(sun_altitude, sun_azimuth, glm::vec3(sun_intensity), sun_bias);
+                scene->set_sun(sun_altitude, sun_azimuth,
+                               glm::vec3(sun_intensity), sun_bias);
 
             ImGui::EndMenu();
         }
 
-        if(scene && ImGui::BeginMenu("Scene Info")) {
+        if (scene && ImGui::BeginMenu("Scene Info"))
+        {
             ImGui::Text("%u objects", u32(scene->objects().size()));
             ImGui::Text("%u point lights", u32(scene->point_lights().size()));
             ImGui::EndMenu();
         }
 
-        if(ImGui::MenuItem("GPU Profiler")) {
+        if (ImGui::MenuItem("GPU Profiler"))
+        {
             open_gpu_profiler = true;
         }
 
-        if(ImGui::BeginMenu("Debug")) {
+        if (ImGui::BeginMenu("Debug"))
+        {
+            if (scene->probes())
+            {
+                const auto dim = scene->probes()->dim();
+                ImGui::Text("Probes: %u (grid %ux%ux%u)",
+                            scene->probes()->probe_count(), dim.x, dim.y,
+                            dim.z);
+            }
+
             ImGui::Checkbox("Show Probes", &render_probes);
 
             ImGui::Separator();
 
-            if (ImGui::BeginMenu("Debug G-Buffer Texture:")) {
-                if(ImGui::MenuItem("None"))
+            if (ImGui::BeginMenu("Debug G-Buffer Texture:"))
+            {
+                if (ImGui::MenuItem("None"))
                     debug_mode = 0;
-                if(ImGui::MenuItem("Albedo"))
+                if (ImGui::MenuItem("Albedo"))
                     debug_mode = 1;
-                if(ImGui::MenuItem("Normals"))
+                if (ImGui::MenuItem("Normals"))
                     debug_mode = 2;
-                if(ImGui::MenuItem("Roughness"))
+                if (ImGui::MenuItem("Roughness"))
                     debug_mode = 3;
-                if(ImGui::MenuItem("Metalness"))
+                if (ImGui::MenuItem("Metalness"))
                     debug_mode = 4;
-                if(ImGui::MenuItem("Depth"))
+                if (ImGui::MenuItem("Depth"))
                     debug_mode = 5;
-                if(ImGui::MenuItem("Position"))
+                if (ImGui::MenuItem("Position"))
                     debug_mode = 6;
                 ImGui::EndMenu();
             }
@@ -291,7 +359,8 @@ void gui(ImGuiRenderer& imgui) {
         }
 
         ImGui::Separator();
-        ImGui::TextUnformatted(reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
+        ImGui::TextUnformatted(
+            reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
 
         ImGui::Separator();
         ImGui::Text("%.2f ms", delta_time * 1000.0f);
@@ -301,66 +370,84 @@ void gui(ImGuiRenderer& imgui) {
         ImGui::TextColored(warning_text_color, ICON_FA_BUG " (DEBUG)");
 #endif
 
-        if(!bindless_enabled()) {
+        if (!bindless_enabled())
+        {
             ImGui::Separator();
-            ImGui::TextColored(error_text_color, ICON_FA_EXCLAMATION_TRIANGLE " Bindless textures not supported");
+            ImGui::TextColored(error_text_color,
+                               ICON_FA_EXCLAMATION_TRIANGLE
+                               " Bindless textures not supported");
         }
         ImGui::EndMainMenuBar();
     }
 
-    if(open_scene_popup) {
+    if (open_scene_popup)
+    {
         ImGui::OpenPopup("###openscenepopup");
 
-        const std::array<std::string, 2> extensions = {".gltf", ".glb"};
+        const std::array<std::string, 2> extensions = { ".gltf", ".glb" };
         load_files = list_data_files(extensions);
     }
 
-    if(ImGui::BeginPopup("###openscenepopup", ImGuiWindowFlags_AlwaysAutoResize)) {
-        if(load_file_window(load_files, load_scene)) {
+    if (ImGui::BeginPopup("###openscenepopup",
+                          ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        if (load_file_window(load_files, load_scene))
+        {
             ImGui::CloseCurrentPopup();
         }
 
         ImGui::EndPopup();
     }
 
-    if(load_envmap_popup) {
+    if (load_envmap_popup)
+    {
         ImGui::OpenPopup("###openenvmappopup");
 
-        const std::array<std::string, 3> extensions = {".png", ".jpg", ".tga"};
+        const std::array<std::string, 3> extensions = { ".png", ".jpg",
+                                                        ".tga" };
         load_files = list_data_files(extensions);
     }
 
-    if(ImGui::BeginPopup("###openenvmappopup", ImGuiWindowFlags_AlwaysAutoResize)) {
-        if(load_file_window(load_files, load_envmap)) {
+    if (ImGui::BeginPopup("###openenvmappopup",
+                          ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        if (load_file_window(load_files, load_envmap))
+        {
             ImGui::CloseCurrentPopup();
         }
 
         ImGui::EndPopup();
     }
 
-    if(open_gpu_profiler) {
-        if(ImGui::Begin(ICON_FA_CLOCK " GPU Profiler")) {
-            const ImGuiTableFlags table_flags =
-                ImGuiTableFlags_SortTristate |
-                ImGuiTableFlags_NoSavedSettings |
-                ImGuiTableFlags_SizingFixedFit |
-                ImGuiTableFlags_BordersInnerV |
-                ImGuiTableFlags_Resizable |
-                ImGuiTableFlags_RowBg;
+    if (open_gpu_profiler)
+    {
+        if (ImGui::Begin(ICON_FA_CLOCK " GPU Profiler"))
+        {
+            const ImGuiTableFlags table_flags = ImGuiTableFlags_SortTristate
+                | ImGuiTableFlags_NoSavedSettings
+                | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV
+                | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg;
 
-            ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt, ImVec4(1, 1, 1, 0.01f));
+            ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt,
+                                  ImVec4(1, 1, 1, 0.01f));
             DEFER(ImGui::PopStyleColor());
 
-            if(ImGui::BeginTable("##timetable", 3, table_flags)) {
-                ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("CPU (ms)", ImGuiTableColumnFlags_NoResize, 70.0f);
-                ImGui::TableSetupColumn("GPU (ms)", ImGuiTableColumnFlags_NoResize, 70.0f);
+            if (ImGui::BeginTable("##timetable", 3, table_flags))
+            {
+                ImGui::TableSetupColumn("Name",
+                                        ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("CPU (ms)",
+                                        ImGuiTableColumnFlags_NoResize, 70.0f);
+                ImGui::TableSetupColumn("GPU (ms)",
+                                        ImGuiTableColumnFlags_NoResize, 70.0f);
                 ImGui::TableHeadersRow();
 
                 std::vector<u32> indents;
-                for(const auto& zone : retrieve_profile()) {
+                for (const auto& zone : retrieve_profile())
+                {
                     auto color_from_time = [](float time) {
-                        const float t = std::min(time / 0.008f, 1.0f); // 8ms = red
+                        const float t =
+                            std::min(time / 0.008f, 1.0f); // 8ms = red
                         return ImVec4(t, 1.0f - t, 0.0f, 1.0f);
                     };
 
@@ -369,21 +456,25 @@ void gui(ImGuiRenderer& imgui) {
                     ImGui::TextUnformatted(zone.name.data());
 
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::PushStyleColor(ImGuiCol_Text, color_from_time(zone.cpu_time));
+                    ImGui::PushStyleColor(ImGuiCol_Text,
+                                          color_from_time(zone.cpu_time));
                     ImGui::Text("%.2f", zone.cpu_time * 1000.0f);
 
                     ImGui::TableSetColumnIndex(2);
-                    ImGui::PushStyleColor(ImGuiCol_Text, color_from_time(zone.gpu_time));
+                    ImGui::PushStyleColor(ImGuiCol_Text,
+                                          color_from_time(zone.gpu_time));
                     ImGui::Text("%.2f", zone.gpu_time * 1000.0f);
 
                     ImGui::PopStyleColor(2);
 
-                    if(!indents.empty() && --indents.back() == 0) {
+                    if (!indents.empty() && --indents.back() == 0)
+                    {
                         indents.pop_back();
                         ImGui::Unindent();
                     }
 
-                    if(zone.contained_zones) {
+                    if (zone.contained_zones)
+                    {
                         indents.push_back(zone.contained_zones);
                         ImGui::Indent();
                     }
@@ -398,19 +489,15 @@ void gui(ImGuiRenderer& imgui) {
     if (debug_probe_index != glm::uvec3(-1))
     {
         ImGui::Begin("Probe G-Buffer");
-        ImGui::Text("Probe at index: %d, %d, %d", debug_probe_index.x, debug_probe_index.y, debug_probe_index.z);
-        auto& tex = scene->probes()->get_gbuffer(debug_probe_index.x, debug_probe_index.y, debug_probe_index.z);
-        tex.bind(0);
-        auto size = tex.size();
-        ImGui::Image((ImTextureID)(intptr_t)&tex, ImVec2(size.x, size.y));
+        ImGui::Text(
+            "Probe at index: %d, %d, %d (display disabled: shared storage now)",
+            debug_probe_index.x, debug_probe_index.y, debug_probe_index.z);
         ImGui::End();
     }
 }
 
-
-
-
-void load_default_scene() {
+void load_default_scene()
+{
     load_scene(std::string(data_path) + "DamagedHelmet.glb");
     load_envmap(std::string(data_path) + "pretoria_gardens.jpg");
 
@@ -431,28 +518,37 @@ void load_default_scene() {
     }
 }
 
-struct RendererState {
-    static RendererState create(glm::uvec2 size) {
+struct RendererState
+{
+    static RendererState create(glm::uvec2 size)
+    {
         RendererState state;
 
         state.size = size;
 
-        if(state.size.x > 0 && state.size.y > 0) {
-            state.depth_texture = Texture(size, ImageFormat::Depth32_FLOAT, WrapMode::Clamp);
-            state.lit_hdr_texture = Texture(size, ImageFormat::RGBA16_FLOAT, WrapMode::Clamp);
+        if (state.size.x > 0 && state.size.y > 0)
+        {
+            state.depth_texture =
+                Texture(size, ImageFormat::Depth32_FLOAT, WrapMode::Clamp);
+            state.lit_hdr_texture =
+                Texture(size, ImageFormat::RGBA16_FLOAT, WrapMode::Clamp);
 
-            state.albedo_texture = Texture(size, ImageFormat::RGBA8_sRGB, WrapMode::Clamp);
-            state.normal_texture = Texture(size, ImageFormat::RGBA8_UNORM, WrapMode::Clamp);
+            state.albedo_texture =
+                Texture(size, ImageFormat::RGBA8_sRGB, WrapMode::Clamp);
+            state.normal_texture =
+                Texture(size, ImageFormat::RGBA8_UNORM, WrapMode::Clamp);
 
-            state.g_buffer_framebuffer = Framebuffer(&state.depth_texture, std::array{
-                &state.albedo_texture,
-                &state.normal_texture,
-                id_texture.get()
-            });
+            state.g_buffer_framebuffer = Framebuffer(
+                &state.depth_texture,
+                std::array{ &state.albedo_texture, &state.normal_texture,
+                            id_texture.get() });
 
-            state.tone_mapped_texture = Texture(size, ImageFormat::RGBA8_UNORM, WrapMode::Clamp);
-            state.main_framebuffer = Framebuffer(nullptr, std::array{&state.lit_hdr_texture});
-            state.tone_map_framebuffer = Framebuffer(nullptr, std::array{&state.tone_mapped_texture});
+            state.tone_mapped_texture =
+                Texture(size, ImageFormat::RGBA8_UNORM, WrapMode::Clamp);
+            state.main_framebuffer =
+                Framebuffer(nullptr, std::array{ &state.lit_hdr_texture });
+            state.tone_map_framebuffer =
+                Framebuffer(nullptr, std::array{ &state.tone_mapped_texture });
         }
 
         return state;
@@ -472,12 +568,12 @@ struct RendererState {
     Framebuffer tone_map_framebuffer;
 };
 
-
-
-
-
-int main(int argc, char** argv) {
-    DEBUG_ASSERT([] { std::cout << "Debug asserts enabled" << std::endl; return true; }());
+int main(int argc, char** argv)
+{
+    DEBUG_ASSERT([] {
+        std::cout << "Debug asserts enabled" << std::endl;
+        return true;
+    }());
 
     parse_args(argc, argv);
 
@@ -488,7 +584,6 @@ int main(int argc, char** argv) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-
     GLFWwindow* window = glfwCreateWindow(1600, 900, "OM3D", nullptr, nullptr);
     glfw_check(window);
     DEFER(glfwDestroyWindow(window));
@@ -497,7 +592,8 @@ int main(int argc, char** argv) {
     glfwSwapInterval(1); // Enable vsync
     init_graphics();
 
-    std::unique_ptr<ImGuiRenderer> imgui = std::make_unique<ImGuiRenderer>(window);
+    std::unique_ptr<ImGuiRenderer> imgui =
+        std::make_unique<ImGuiRenderer>(window);
 
     load_default_scene();
 
@@ -505,9 +601,12 @@ int main(int argc, char** argv) {
     auto light_pass_program = Program::from_files("light.frag", "screen.vert");
     RendererState renderer;
 
-    for(;;) {
+    for (;;)
+    {
         glfwPollEvents();
-        if(glfwWindowShouldClose(window) || glfwGetKey(window, GLFW_KEY_ESCAPE)) {
+        if (glfwWindowShouldClose(window)
+            || glfwGetKey(window, GLFW_KEY_ESCAPE))
+        {
             break;
         }
 
@@ -518,15 +617,20 @@ int main(int argc, char** argv) {
             int height = 0;
             glfwGetWindowSize(window, &width, &height);
 
-            if(renderer.size != glm::uvec2(width, height)) {
-                id_texture = std::make_shared<Texture>(glm::uvec2(width, height), ImageFormat::RGB8_UNORM, WrapMode::Clamp);
+            if (renderer.size != glm::uvec2(width, height))
+            {
+                id_texture = std::make_shared<Texture>(
+                    glm::uvec2(width, height), ImageFormat::RGB8_UNORM,
+                    WrapMode::Clamp);
                 renderer = RendererState::create(glm::uvec2(width, height));
             }
         }
 
         update_delta_time();
 
-        if(const auto& io = ImGui::GetIO(); !io.WantCaptureMouse && !io.WantCaptureKeyboard) {
+        if (const auto& io = ImGui::GetIO();
+            !io.WantCaptureMouse && !io.WantCaptureKeyboard)
+        {
             process_inputs(window, scene->camera());
         }
 
@@ -552,10 +656,18 @@ int main(int argc, char** argv) {
                 glViewport(0, 0, int(renderer.size.x), int(renderer.size.y));
                 renderer.g_buffer_framebuffer.bind(true, true);
                 scene->render(render_probes);
+
+                // Re-bake a batch of probes each frame (placeholder clears
+                // shared arrays)
+                if (scene->probes())
+                {
+                    scene->probes()->bake_batch();
+                }
             }
 
             {
-                // NOTE: uses additive lighting, must not use another frame buffer
+                // NOTE: uses additive lighting, must not use another frame
+                // buffer
                 PROFILE_GPU("Point Light pass");
 
                 renderer.albedo_texture.bind(0);
@@ -573,7 +685,8 @@ int main(int argc, char** argv) {
                 renderer.main_framebuffer.bind(true, true);
 
                 light_pass_program->bind();
-                light_pass_program->set_uniform(HASH("debug_mode"), (u32)debug_mode);
+                light_pass_program->set_uniform(HASH("debug_mode"),
+                                                (u32)debug_mode);
                 auto buffers = scene->bind_light_pass_uniforms();
 
                 renderer.albedo_texture.bind(0);
@@ -607,7 +720,6 @@ int main(int argc, char** argv) {
 
         glfwSwapBuffers(window);
     }
-
 
     // destroy scene and child OpenGL objects
     scene = nullptr;
