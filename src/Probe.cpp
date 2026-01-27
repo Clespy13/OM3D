@@ -89,7 +89,9 @@ namespace OM3D
         int y_count = (int)((max_y - min_y) / target_spacing);
         int z_count = (int)((max_z - min_z) / target_spacing);
 
-        constexpr int max_probes = 2048;
+        GLint max_array_layers = 0;
+        glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &max_array_layers);
+        const int max_probes = std::max(1, max_array_layers / 6);
         int total = x_count * y_count * z_count;
         if (total > max_probes)
         {
@@ -205,7 +207,9 @@ namespace OM3D
         buffer.bind(BufferUsage::Storage, index);
     }
 
-    void bake_gbuffer_face(const Scene &s, std::array<Texture*, 3> buffers, int layer, int face_index)
+    void bake_gbuffer_face(const Scene& s, glm::vec3 probe_pos,
+                           std::array<Texture*, 3> buffers, int layer,
+                           int face_index)
     {
         Framebuffer f = Framebuffer(
             buffers[0], std::array{ buffers[1], buffers[2] }, layer);
@@ -214,29 +218,35 @@ namespace OM3D
         m.set_program(Program::from_files("g_buffer.frag", "basic.vert"));
 
         Camera temp;
-        temp.set_proj(Camera::perspective(to_rad(90), s.camera().fov(), s.camera().near()));
+        temp.set_proj(Camera::perspective(to_rad(90), 1.0f, s.camera().near()));
         Camera cams[6] = {
             Camera(temp), Camera(temp), Camera(temp),
             Camera(temp), Camera(temp), Camera(temp),
         };
 
-        cams[0].set_view(glm::lookAt(glm::vec3(0), glm::vec3(1, 0, 0), glm::vec3(0, -1, 0)));
-        cams[1].set_view(glm::lookAt(glm::vec3(0), glm::vec3(-1, 0, 0), glm::vec3(0, -1, 0)));
-        cams[2].set_view(glm::lookAt(glm::vec3(0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1)));
-        cams[3].set_view(glm::lookAt(glm::vec3(0), glm::vec3(0, -1, 0), glm::vec3(0, 0, -1)));
-        cams[4].set_view(glm::lookAt(glm::vec3(0), glm::vec3(0, 0, 1), glm::vec3(0, -1, 0)));
-        cams[5].set_view(glm::lookAt(glm::vec3(0), glm::vec3(0, 0, -1), glm::vec3(0, -1, 0)));
+        cams[0].set_view(glm::lookAt(probe_pos, probe_pos + glm::vec3(1, 0, 0),
+                                     glm::vec3(0, -1, 0)));
+        cams[1].set_view(glm::lookAt(probe_pos, probe_pos + glm::vec3(-1, 0, 0),
+                                     glm::vec3(0, -1, 0)));
+        cams[2].set_view(glm::lookAt(probe_pos, probe_pos + glm::vec3(0, 1, 0),
+                                     glm::vec3(0, 0, 1)));
+        cams[3].set_view(glm::lookAt(probe_pos, probe_pos + glm::vec3(0, -1, 0),
+                                     glm::vec3(0, 0, -1)));
+        cams[4].set_view(glm::lookAt(probe_pos, probe_pos + glm::vec3(0, 0, 1),
+                                     glm::vec3(0, -1, 0)));
+        cams[5].set_view(glm::lookAt(probe_pos, probe_pos + glm::vec3(0, 0, -1),
+                                     glm::vec3(0, -1, 0)));
 
         f.bind(true, true);
         s.render_cube(cams[face_index], m);
     }
 
-    void ProbeMap::bake_batch(const Scene &s)
+    void ProbeMap::bake_batch(const Scene& s)
     {
         if (_probe_count == 0)
             return;
 
-        constexpr u32 kBatchSize = 32;
+        constexpr u32 kBatchSize = 1;
 
         const u32 end =
             std::min(_probe_count, _next_probe_to_bake + kBatchSize);
@@ -244,32 +254,21 @@ namespace OM3D
         for (u32 i = _next_probe_to_bake; i < end; ++i)
         {
             const u32 base_layer = i * 6;
+            const u32 level_size = (u32)(_dim.x * _dim.y);
+            const u32 line_size = (u32)_dim.x;
+            const u32 z = i / level_size;
+            const u32 rem = i - z * level_size;
+            const u32 y = rem / line_size;
+            const u32 x = rem - y * line_size;
+            const glm::vec3 probe_pos = _probes[z][y][x]->_position;
             for (u32 face = 0; face < 6; ++face)
             {
                 const u32 layer = base_layer + face;
-                const glm::uvec2 size = _gbuffer_color_array.size();
-                const GLint level = 0;
-                bake_gbuffer_face(s, std::array {
-                    &_gbuffer_depth_array,
-                    &_gbuffer_color_array,
-                    &_gbuffer_normal_array
-                }, layer, face);
-
-                // Clear color
-                const GLfloat clear_color[4] = { 0.f, 0.f, 0.f, 0.f };
-                glClearTexSubImage(_gbuffer_color_array.handle(), level, 0, 0,
-                                   (GLint)layer, size.x, size.y, 1, GL_RGBA,
-                                   GL_FLOAT, clear_color);
-                glClearTexSubImage(_gbuffer_normal_array.handle(), level, 0, 0,
-                                   (GLint)layer, size.x, size.y, 1, GL_RGBA,
-                                   GL_FLOAT, clear_color);
-
-                // Depth to 1.0
-                const GLfloat clear_depth[1] = { 1.f };
-                glClearTexSubImage(_gbuffer_depth_array.handle(), level, 0, 0,
-                                   (GLint)layer, size.x, size.y, 1,
-                                   GL_DEPTH_COMPONENT, GL_FLOAT, clear_depth);
-
+                bake_gbuffer_face(s, probe_pos,
+                                  std::array{ &_gbuffer_depth_array,
+                                              &_gbuffer_color_array,
+                                              &_gbuffer_normal_array },
+                                  layer, face);
             }
         }
 
