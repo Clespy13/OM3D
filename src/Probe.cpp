@@ -126,6 +126,10 @@ namespace OM3D
             face_size, _probe_count, ImageFormat::RGBA8_UNORM);
         _gbuffer_depth_array = Texture::empty_cubemap_array(
             face_size, _probe_count, ImageFormat::Depth32_FLOAT);
+        _gbuffer_position_array = Texture::empty_cubemap_array(
+            face_size, _probe_count, ImageFormat::RGBA16_FLOAT);
+        _probe_radiance_array = Texture::empty_cubemap_array(
+            face_size, _probe_count, ImageFormat::RGBA16_FLOAT);
 
         _capture_color =
             Texture::empty_cubemap(face_size, ImageFormat::RGBA8_UNORM);
@@ -208,14 +212,15 @@ namespace OM3D
     }
 
     void bake_gbuffer_face(const Scene& s, glm::vec3 probe_pos,
-                           std::array<Texture*, 3> buffers, int layer,
+                           std::array<Texture*, 4> buffers, int layer,
                            int face_index)
     {
         Framebuffer f = Framebuffer(
-            buffers[0], std::array{ buffers[1], buffers[2] }, layer);
+            buffers[0], std::array{ buffers[1], buffers[2], buffers[3] },
+            layer);
 
         Material m;
-        m.set_program(Program::from_files("g_buffer.frag", "basic.vert"));
+        m.set_program(Program::from_files("probe_gbuffer.frag", "basic.vert"));
 
         Camera temp;
         temp.set_proj(Camera::perspective(to_rad(90), 1.0f, s.camera().near()));
@@ -267,9 +272,28 @@ namespace OM3D
                 bake_gbuffer_face(s, probe_pos,
                                   std::array{ &_gbuffer_depth_array,
                                               &_gbuffer_color_array,
-                                              &_gbuffer_normal_array },
+                                              &_gbuffer_normal_array,
+                                              &_gbuffer_position_array },
                                   layer, face);
             }
+
+            auto buffers = s.bind_light_pass_uniforms();
+
+            auto program = Program::from_file("probe_lighting.comp");
+            program->bind();
+            program->set_uniform(HASH("probe_position"), probe_pos);
+            program->set_uniform(HASH("base_layer"), (int)base_layer);
+
+            _gbuffer_color_array.bind_as_image(0, AccessType::ReadOnly);
+            _gbuffer_normal_array.bind_as_image(1, AccessType::ReadOnly);
+            _gbuffer_position_array.bind_as_image(2, AccessType::ReadOnly);
+            _probe_radiance_array.bind_as_image(3, AccessType::WriteOnly);
+
+            const auto size = _gbuffer_color_array.size();
+            const u32 group_x = (size.x + 7) / 8;
+            const u32 group_y = (size.y + 7) / 8;
+            glDispatchCompute(group_x, group_y, 6);
+            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         }
 
         _next_probe_to_bake = (end == _probe_count) ? 0 : end;

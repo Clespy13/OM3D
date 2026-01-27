@@ -78,7 +78,6 @@ namespace OM3D
 
         const GLenum gl_wrap =
             (wrap == WrapMode::Repeat) ? GL_REPEAT : GL_CLAMP_TO_EDGE;
-        glTextureParameteri(_handle.get(), GL_TEXTURE_WRAP_R, gl_wrap);
         glTextureParameteri(_handle.get(), GL_TEXTURE_WRAP_S, gl_wrap);
         glTextureParameteri(_handle.get(), GL_TEXTURE_WRAP_T, gl_wrap);
 
