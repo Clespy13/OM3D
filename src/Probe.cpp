@@ -113,6 +113,7 @@ namespace OM3D
         float x_spacing = (max_x - min_x) / (float)x_count;
         float y_spacing = (max_y - min_y) / (float)y_count;
         float z_spacing = (max_z - min_z) / (float)z_count;
+        _spacing = glm::vec3(x_spacing, y_spacing, z_spacing);
 
         std::cout << "Rendering grid of " << x_count << "x" << y_count << "x"
                   << z_count << " probes...\n";
@@ -187,28 +188,7 @@ namespace OM3D
 
     void ProbeMap::bind(int index) const
     {
-        int probe_count = (int)(_dim.x * _dim.y * _dim.z);
-        TypedBuffer<shader::Probe> buffer(nullptr, std::max(probe_count, 1));
-
-        int level_size = (int)(_dim.x * _dim.y);
-        int line_size = (int)_dim.x;
-        {
-            auto mapping = buffer.map(AccessType::WriteOnly);
-            for (int z = 0; z < _dim.z; z++)
-            {
-                for (int y = 0; y < _dim.y; y++)
-                {
-                    for (int x = 0; x < _dim.x; x++)
-                    {
-                        auto& probe = _probes[z][y][x];
-                        mapping[z * level_size + y * line_size + x] = {
-                            probe->_position
-                        };
-                    }
-                }
-            }
-        }
-        buffer.bind(BufferUsage::Storage, index);
+        _probe_radiance_array.bind(index);
     }
 
     void bake_gbuffer_face(const Scene& s, glm::vec3 probe_pos,

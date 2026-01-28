@@ -51,9 +51,13 @@ namespace OM3D
             return _probe_count;
         }
 
+        glm::vec3 spacing() const { return _spacing; }
+        glm::vec3 min_pos() const { return _probes[0][0][0]->_position; }
+
     private:
         probe_data _probes;
         glm::vec3 _dim;
+        glm::vec3 _spacing;
 
         Texture _gbuffer_color_array;
         Texture _gbuffer_normal_array;

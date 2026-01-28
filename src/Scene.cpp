@@ -357,6 +357,14 @@ std::pair<ByteBuffer, ByteBuffer> Scene::bind_light_pass_uniforms() const
         mapping[0].sun_dir = glm::normalize(_sun_direction);
         mapping[0].sun_bias = _sun_bias;
         mapping[0].shadow_view_proj = _shadow_cam.view_proj_matrix();
+
+        if (_probes->probe_count() != 0)
+        {
+            mapping[0].probe_dim = _probes->dim();
+            mapping[0].probe_min_pos = _probes->min_pos();
+            mapping[0].probe_count = _probes->probe_count();
+            mapping[0].probe_spacing = _probes->spacing();
+        }
     }
     buffer.bind(BufferUsage::Uniform, 0);
 
@@ -378,6 +386,7 @@ std::pair<ByteBuffer, ByteBuffer> Scene::bind_light_pass_uniforms() const
     _envmap->bind(4);
     brdf_lut().bind(5);
     _shadow_pass_texture->bind(6);
+    _probes->bind(7);
 
     return std::make_pair<ByteBuffer, ByteBuffer>(std::move(buffer), std::move(light_buffer));
 }

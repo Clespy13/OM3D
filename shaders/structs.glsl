@@ -16,6 +16,12 @@ struct FrameData {
     mat4 shadow_view_proj;
 
     float sun_bias;
+
+    vec3 probe_dim;
+    vec3 probe_min_pos;
+    vec3 probe_spacing;
+    uint probe_count;
+
     uint padding;
 };
 
@@ -24,10 +30,6 @@ struct PointLight {
     float radius;
     vec3 color;
     float padding;
-};
-
-struct Probe {
-    vec3 position;
 };
 
 const uint DebugAlbedoMode = 1;
