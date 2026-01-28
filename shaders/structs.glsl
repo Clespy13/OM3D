@@ -32,9 +32,14 @@ struct PointLight {
     float padding;
 };
 
+struct ProbeCamera {
+    mat4 inv_view_proj[6];
+};
+
 const uint DebugAlbedoMode = 1;
 const uint DebugNormalMode = 2;
 const uint DebugRoughnessMode = 3;
 const uint DebugMetallicMode = 4;
 const uint DebugDepthMode = 5;
 const uint DebugPositionMode = 6;
+const uint DebugNoProbe = 7;

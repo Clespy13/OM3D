@@ -387,7 +387,7 @@ std::pair<ByteBuffer, ByteBuffer> Scene::bind_light_pass_uniforms() const
     _envmap->bind(4);
     brdf_lut().bind(5);
     _shadow_pass_texture->bind(6);
-    _probes->bind(7);
+    _probes->bind(7, *this);
 
     return std::make_pair<ByteBuffer, ByteBuffer>(std::move(buffer), std::move(light_buffer));
 }

@@ -1,5 +1,6 @@
 #include "SceneObject.h"
 
+#include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 #include "StaticMesh.h"
 

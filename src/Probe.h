@@ -39,7 +39,7 @@ namespace OM3D
         void bake_all(const Scene& s);
 
         void render(const Camera& c) const;
-        void bind(int index) const;
+        void bind(int index, const Scene& s) const;
 
         void bake_batch(const Scene& s);
 

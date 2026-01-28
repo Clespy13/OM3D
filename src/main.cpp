@@ -352,6 +352,8 @@ void gui(ImGuiRenderer& imgui)
                     debug_mode = 5;
                 if (ImGui::MenuItem("Position"))
                     debug_mode = 6;
+                if (ImGui::MenuItem("No Probe"))
+                    debug_mode = 7;
                 ImGui::EndMenu();
             }
             ImGui::EndMenu();

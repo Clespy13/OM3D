@@ -13,6 +13,7 @@
 #include "Texture.h"
 #include "TimestampQuery.h"
 #include "TypedBuffer.h"
+#include "glm/matrix.hpp"
 #include "graphics.h"
 #include "shader_structs.h"
 
@@ -254,9 +255,61 @@ namespace OM3D
         }
     }
 
-    void ProbeMap::bind(int index) const
+    void ProbeMap::bind(int index, const Scene& s) const
     {
-        _gbuffer_color_array.bind(index);
+        TypedBuffer<shader::ProbeCamera> buffer(nullptr, _probe_count);
+        {
+            auto mapping = buffer.map(AccessType::WriteOnly);
+
+            for (u32 i = 0; i < _probe_count; ++i)
+            {
+                const u32 level_size = (u32)(_dim.x * _dim.y);
+                const u32 line_size = (u32)_dim.x;
+                const u32 z = i / level_size;
+                const u32 rem = i - z * level_size;
+                const u32 y = rem / line_size;
+                const u32 x = rem - y * line_size;
+                const glm::vec3 probe_pos = _probes[z][y][x]->_position;
+
+                Camera temp;
+                temp.set_proj(Camera::perspective(to_rad(90.0f), 1.0f,
+                                                  s.camera().near()));
+                Camera cams[6] = {
+                    Camera(temp), Camera(temp), Camera(temp),
+                    Camera(temp), Camera(temp), Camera(temp),
+                };
+
+                cams[0].set_view(glm::lookAt(probe_pos,
+                                             probe_pos + glm::vec3(1, 0, 0),
+                                             glm::vec3(0, -1, 0)));
+                cams[1].set_view(glm::lookAt(probe_pos,
+                                             probe_pos + glm::vec3(-1, 0, 0),
+                                             glm::vec3(0, -1, 0)));
+                cams[2].set_view(glm::lookAt(probe_pos,
+                                             probe_pos + glm::vec3(0, 1, 0),
+                                             glm::vec3(0, 0, 1)));
+                cams[3].set_view(glm::lookAt(probe_pos,
+                                             probe_pos + glm::vec3(0, -1, 0),
+                                             glm::vec3(0, 0, -1)));
+                cams[4].set_view(glm::lookAt(probe_pos,
+                                             probe_pos + glm::vec3(0, 0, 1),
+                                             glm::vec3(0, -1, 0)));
+                cams[5].set_view(glm::lookAt(probe_pos,
+                                             probe_pos + glm::vec3(0, 0, -1),
+                                             glm::vec3(0, -1, 0)));
+
+                mapping[i].inv_view_proj[0] = glm::inverse(cams[0].view_proj_matrix());
+                mapping[i].inv_view_proj[1] = glm::inverse(cams[1].view_proj_matrix());
+                mapping[i].inv_view_proj[2] = glm::inverse(cams[2].view_proj_matrix());
+                mapping[i].inv_view_proj[3] = glm::inverse(cams[3].view_proj_matrix());
+                mapping[i].inv_view_proj[4] = glm::inverse(cams[4].view_proj_matrix());
+                mapping[i].inv_view_proj[5] = glm::inverse(cams[5].view_proj_matrix());
+            }
+        }
+
+        buffer.bind(BufferUsage::Storage, 1);
+        _probe_radiance_array.bind(index);
+        _gbuffer_depth_array.bind(index + 1);
     }
 
     void ProbeMap::bake_batch(const Scene& s)

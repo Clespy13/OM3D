@@ -17,6 +17,7 @@ layout(binding = 4) uniform samplerCube in_envmap;
 layout(binding = 5) uniform sampler2D brdf_lut;
 layout(binding = 6) uniform sampler2DShadow in_shadow;
 layout(binding = 7) uniform samplerCubeArray probe_radiance;
+layout(binding = 8) uniform samplerCubeArray probe_depth;
 
 uniform uint debug_mode;
 
@@ -24,11 +25,22 @@ layout(binding = 0) uniform Data {
     FrameData frame;
 };
 
+layout(binding = 1) buffer ProbeData {
+    ProbeCamera cameras[];
+};
+
 vec3 get_probe_color(vec3 probe_pos, vec3 position) {
     float layer = probe_pos.x + probe_pos.y * frame.probe_dim.x + probe_pos.z * frame.probe_dim.x * frame.probe_dim.y;
 
     vec3 probe_cube_center = frame.probe_min_pos.xyz + probe_pos * frame.probe_spacing.xyz;
     vec3 dir = normalize(position - probe_cube_center);
+
+    float depth = texture(probe_depth, vec4(dir, layer)).r;
+    vec3 obj_pos = unproject(dir.xy, depth, cameras[int(layer)].inv_view_proj[int(dir.z)]);
+    float dist = distance(obj_pos, position);
+
+    if (dist > 0.001)
+        return vec3(0);
     return texture(probe_radiance, vec4(dir, layer)).rgb;
 }
 
@@ -130,8 +142,11 @@ void main() {
         vec3 acc = eval_ibl(in_envmap, brdf_lut, normal, view_dir, albedo.rgb, metallic, roughness) * frame.ibl_intensity;
         acc += frame.sun_color * eval_brdf(normal, view_dir, frame.sun_dir, albedo.rgb, metallic, roughness) * shadow;
 
-        vec3 lighting = probe_lighting(position);
-        acc += lighting;
+        if (debug_mode != DebugNoProbe)
+        {
+            vec3 lighting = probe_lighting(position);
+            acc += lighting;
+        }
 
         out_color = vec4(acc, 1.0);
     }
