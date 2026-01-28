@@ -41,6 +41,8 @@ class Scene : NonMovable {
         std::shared_ptr<const ProbeMap> probes() const;
         void bake_probes();
 
+        void bake();
+
         Camera& camera();
         const Camera& camera() const;
 

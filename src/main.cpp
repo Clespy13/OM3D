@@ -633,6 +633,10 @@ int main(int argc, char** argv)
             process_inputs(window, scene->camera());
         }
 
+        // For debug purposes
+        // PROFILE_GPU("Bake");
+        // scene->bake();
+
         // Draw everything
         {
             PROFILE_GPU("Frame");

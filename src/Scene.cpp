@@ -392,6 +392,12 @@ std::pair<ByteBuffer, ByteBuffer> Scene::bind_light_pass_uniforms() const
     return std::make_pair<ByteBuffer, ByteBuffer>(std::move(buffer), std::move(light_buffer));
 }
 
+void Scene::bake()
+{
+    _probes = std::make_shared<ProbeMap>(*this);
+    _probes->bake_all(*this);
+}
+
 std::pair<ByteBuffer, ByteBuffer> Scene::bind_probe_compute_uniforms() const
 {
     TypedBuffer<shader::FrameData> buffer(nullptr, 1);

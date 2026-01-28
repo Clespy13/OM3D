@@ -178,7 +178,7 @@ namespace OM3D
         m.set_program(Program::from_files("probe_gbuffer.frag", "basic.vert"));
 
         Camera temp;
-        temp.set_proj(Camera::perspective(to_rad(90), 1.0f, s.camera().near()));
+        temp.set_proj(Camera::perspective(to_rad(90.0f), 1.0f, s.camera().near()));
         Camera cams[6] = {
             Camera(temp), Camera(temp), Camera(temp),
             Camera(temp), Camera(temp), Camera(temp),
