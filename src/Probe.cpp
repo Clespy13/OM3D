@@ -280,7 +280,7 @@ namespace OM3D
             const u32 x = rem - y * line_size;
             const glm::vec3 probe_pos = _probes[z][y][x]->_position;
 
-            s.bind_probe_compute_uniforms();
+            auto buffers = s.bind_probe_compute_uniforms();
 
             auto program = Program::from_file("probe_lighting.comp");
             program->bind();

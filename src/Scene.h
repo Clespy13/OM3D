@@ -25,7 +25,7 @@ class Scene : NonMovable {
         void render(bool debug=false) const;
         void render_cube(const Camera& c, const Material& m) const;
 
-        void bind_probe_compute_uniforms() const;
+        std::pair<ByteBuffer, ByteBuffer> bind_probe_compute_uniforms() const;
         // Buffers must be stored by the caller to avoid calling destructor
         std::pair<ByteBuffer, ByteBuffer> bind_light_pass_uniforms() const;
         void point_light_pass() const;
