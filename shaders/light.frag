@@ -27,22 +27,22 @@ layout(binding = 0) uniform Data {
 vec3 get_probe_color(vec3 probe_pos, vec3 position) {
     float layer = probe_pos.x + probe_pos.y * frame.probe_dim.x + probe_pos.z * frame.probe_dim.x * frame.probe_dim.y;
 
-    vec3 probe_cube_center = frame.probe_min_pos + probe_pos * frame.probe_spacing;
+    vec3 probe_cube_center = frame.probe_min_pos.xyz + probe_pos * frame.probe_spacing.xyz;
     vec3 dir = normalize(position - probe_cube_center);
     return texture(probe_radiance, vec4(dir, layer)).rgb;
 }
 
 vec3 probe_lighting(vec3 position) {
-    vec3 start = position - frame.probe_min_pos;
-    vec3 corner_pos = start / frame.probe_spacing;
+    vec3 start = position + frame.probe_min_pos.xyz;
+    vec3 corner_pos = start / frame.probe_spacing.xyz;
 
     if (frame.probe_dim.x == 0 || frame.probe_dim.y == 0 || frame.probe_dim.z == 0)
         return vec3(0.0);
 
     vec3 p0 = floor(corner_pos);
     vec3 p1 = p0 + 1.0;
-    p0 = clamp(p0, vec3(0.0), frame.probe_dim - 1.0);
-    p1 = clamp(p1, vec3(0.0), frame.probe_dim - 1.0);
+    p0 = clamp(p0, vec3(0.0), frame.probe_dim.xyz - 1.0);
+    p1 = clamp(p1, vec3(0.0), frame.probe_dim.xyz - 1.0);
 
     // NOTE: Si je me suis pas trompée, le 000 c'est le coin avant en bas à gauche
     vec3 c000 = get_probe_color(vec3(p0.x, p0.y, p0.z), position);
@@ -54,7 +54,7 @@ vec3 probe_lighting(vec3 position) {
     vec3 c011 = get_probe_color(vec3(p0.x, p1.y, p1.z), position);
     vec3 c111 = get_probe_color(vec3(p1.x, p1.y, p1.z), position);
 
-    vec3 off = corner_pos - p0;
+    vec3 off = fract(corner_pos);
 
     vec3 c00 = mix(c000, c100, off.x);
     vec3 c01 = mix(c001, c101, off.x);
@@ -65,7 +65,7 @@ vec3 probe_lighting(vec3 position) {
     vec3 c1 = mix(c01, c11, off.y);
 
     vec3 result = mix(c0, c1, off.z);
-    return c00;
+    return result;
 }
 
 void main() {

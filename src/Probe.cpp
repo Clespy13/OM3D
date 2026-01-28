@@ -115,7 +115,7 @@ namespace OM3D
         float z_spacing = (max_z - min_z) / (float)z_count;
         _spacing = glm::vec3(x_spacing, y_spacing, z_spacing);
 
-        std::cout << "Rendering grid of " << x_count << "x" << y_count << "x"
+        std::cout << "Creating grid of " << x_count << "x" << y_count << "x"
                   << z_count << " probes...\n";
 
         _probe_count = (u32)total;
@@ -163,7 +163,31 @@ namespace OM3D
             _probes.push_back(level);
         }
 
-        std::cout << "\nRendering done.\n";
+        std::cout << "\nCreation done.\n";
+    }
+
+    void ProbeMap::bake_all(const Scene& s)
+    {
+        if (_probe_count == 0)
+            return;
+
+        int counter = 0;
+        std::cout << "\nBaking Probe Radiance\n";
+        for (float z = 0; z < _dim.z; z++)
+        {
+            for (float y = 0; y < _dim.y; y++)
+            {
+                for (float x = 0; x < _dim.x; x++)
+                {
+                    bake_batch(s);
+
+                    std::cout << "\x1b[2K\r" << ++counter << " / " << _probe_count
+                              << std::flush;
+                }
+            }
+        }
+
+        std::cout << "\nBake done.\n";
     }
 
     void ProbeMap::render(const Camera& c) const
@@ -257,7 +281,7 @@ namespace OM3D
                                   layer, face);
             }
 
-            auto buffers = s.bind_light_pass_uniforms();
+            s.bind_probe_compute_uniforms();
 
             auto program = Program::from_file("probe_lighting.comp");
             program->bind();

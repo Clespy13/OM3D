@@ -36,6 +36,7 @@ namespace OM3D
             std::vector<std::vector<std::vector<std::shared_ptr<Probe>>>>;
 
         ProbeMap(const Scene& s);
+        void bake_all(const Scene& s);
 
         void render(const Camera& c) const;
         void bind(int index) const;

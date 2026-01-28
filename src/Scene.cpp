@@ -61,6 +61,7 @@ void Scene::load_point_light_meshes() {
     _point_light_pass_material.set_write_depth(GL_TRUE);
 
     _probes = std::make_shared<ProbeMap>(*this);
+    _probes->bake_all(*this);
 }
 
 void Scene::add_object(SceneObject obj) {
@@ -360,10 +361,10 @@ std::pair<ByteBuffer, ByteBuffer> Scene::bind_light_pass_uniforms() const
 
         if (_probes->probe_count() != 0)
         {
-            mapping[0].probe_dim = _probes->dim();
-            mapping[0].probe_min_pos = _probes->min_pos();
+            mapping[0].probe_dim = glm::vec4(_probes->dim(), 1.0);
+            mapping[0].probe_min_pos = glm::vec4(_probes->min_pos(), 1.0);
             mapping[0].probe_count = _probes->probe_count();
-            mapping[0].probe_spacing = _probes->spacing();
+            mapping[0].probe_spacing = glm::vec4(_probes->spacing(), 1.0);
         }
     }
     buffer.bind(BufferUsage::Uniform, 0);
@@ -389,6 +390,12 @@ std::pair<ByteBuffer, ByteBuffer> Scene::bind_light_pass_uniforms() const
     _probes->bind(7);
 
     return std::make_pair<ByteBuffer, ByteBuffer>(std::move(buffer), std::move(light_buffer));
+}
+
+void Scene::bind_probe_compute_uniforms() const
+{
+    _envmap->bind(4);
+    brdf_lut().bind(5);
 }
 
 void Scene::point_light_pass() const
