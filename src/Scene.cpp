@@ -325,19 +325,21 @@ void Scene::render_cube(const Camera& c, const Material& m) const
     _sky_material.set_uniform(HASH("intensity"), _ibl_intensity);
     draw_full_screen_triangle();
 
+    (void)m;
+
     // Render every object
     {
         // Opaque first
         for(const SceneObject& obj : _objects) {
             if(obj.material().is_opaque()) {
-                obj.render_with_material(c, m);
+                obj.render(c);
             }
         }
 
         // Transparent after
         for(const SceneObject& obj : _objects) {
             if(!obj.material().is_opaque()) {
-                obj.render_with_material(c, m);
+                obj.render(c);
             }
         }
     }

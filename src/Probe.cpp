@@ -257,7 +257,7 @@ namespace OM3D
 
     void ProbeMap::bind(int index, const Scene& s) const
     {
-        TypedBuffer<shader::ProbeCamera> buffer(nullptr, _probe_count);
+        TypedBuffer<shader::ProbeCamera> buffer(nullptr, std::max(static_cast<u32>(1), _probe_count));
         {
             auto mapping = buffer.map(AccessType::WriteOnly);
 
