@@ -9,6 +9,7 @@ layout(binding = 0, rgba8) readonly uniform imageCubeArray gbuffer_color;
 layout(binding = 1, rgba8) readonly uniform imageCubeArray gbuffer_normal;
 layout(binding = 2, rgba16f) readonly uniform imageCubeArray gbuffer_position;
 layout(binding = 3, rgba16f) writeonly uniform imageCubeArray out_radiance;
+layout(binding = 4, rgba16f) writeonly uniform imageCubeArray out_reflexion;
 
 layout(binding = 4) uniform samplerCube in_envmap;
 layout(binding = 5) uniform sampler2D brdf_lut;
@@ -25,6 +26,152 @@ layout(binding = 1) buffer PointLights
 
 uniform vec3 probe_position;
 uniform int base_layer;
+
+//// Color utils
+// From three.js
+vec4 sRGBToLinear( in vec4 value ) {
+	return vec4( mix( pow( value.rgb * 0.9478672986 + vec3( 0.0521327014 ), vec3( 2.4 ) ), value.rgb * 0.0773993808, vec3( lessThanEqual( value.rgb, vec3( 0.04045 ) ) ) ), value.a );
+}
+
+// From three.js
+vec4 LinearTosRGB( in vec4 value ) {
+	return vec4( mix( pow( value.rgb, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ), value.rgb * 12.92, vec3( lessThanEqual( value.rgb, vec3( 0.0031308 ) ) ) ), value.a );
+}
+
+//// Convertion utils
+vec2 cartesianToSpherical(vec3 cartesian) {
+    // Compute azimuthal angle, in [-PI, PI]
+    float phi = atan(cartesian.z, cartesian.x);
+    // Compute polar angle, in [-PI/2, PI/2]
+    float theta = asin(cartesian.y);
+    return vec2(phi, theta);
+}
+
+vec2 ToUV(vec3 normal)
+{
+  vec2 sphere_uv = cartesianToSpherical(normal);
+  vec2 off = vec2(3.1415926, 3.1415926 / 2.0);
+  vec2 uv = (sphere_uv + off) / (off * 2.0);
+  uv.y = 1.0 - uv.y;
+  return uv;
+}
+
+vec3 uv_to_normal(vec2 uv)
+{
+  uv.y += 0.5;
+
+  vec2 off = vec2(3.1415926, 3.1415926 / 2.0);
+  vec2 off_uv = uv * off * 2.0 - off;
+
+  float phi = off_uv.x;
+  float theta = off_uv.y;
+  return vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
+}
+
+vec3 RGBMDecode(vec4 rgbm) {
+  return 6.0 * rgbm.rgb * rgbm.a;
+}
+
+float compute_roughness(vec2 uv)
+{
+  float lower = 0.0;
+  float upper = 0.5;
+  float size = 0.5;
+
+  float level = 0.0;
+  while (level < 6.0)
+  {
+    if (lower <= uv.y && uv.y <= upper)
+      break;
+
+    lower = upper;
+    size /= 2.0;
+    upper += size;
+    level += 1.0;
+  }
+
+  return level / 6.0;
+}
+
+vec2 spec_uv_to_env_uv(vec2 uv, float target_roughness)
+{
+  float lower = 0.0;
+  float upper = 0.5;
+  float size = 0.5;
+
+  float level = 1.0;
+  while ((level - 1.0) / 6.0 < target_roughness)
+  {
+    lower = upper;
+    size /= 2.0;
+    upper += size;
+    level += 1.0;
+  }
+
+  float nb_sub = pow(2.0, level - 1.0);
+  return vec2(fract(uv.x * nb_sub), 1.0 - (uv.y - lower) / size);
+}
+
+/// Specular generation
+vec3 ImportanceSampleGGX(vec2 Xi, float Roughness, vec3 N)
+{
+  float a = Roughness * Roughness;
+  float Phi = 2.0 * 3.1415926 * Xi.x;
+  float CosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
+  float SinTheta = sqrt(1.0 - CosTheta * CosTheta);
+  vec3 H;
+  H.x = SinTheta * cos(Phi);
+  H.y = SinTheta * sin(Phi);
+  H.z = CosTheta;
+  vec3 UpVector = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+  vec3 TangentX = normalize(cross(UpVector, N));
+  vec3 TangentY = cross(N, TangentX);
+  // Tangent to world space
+  return TangentX * H.x + TangentY * H.y + N * H.z;
+}
+
+float radicalInverse_VdC(uint bits) {
+     bits = (bits << 16u) | (bits >> 16u);
+     bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+     bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+     bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+     bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+     return float(bits) * 2.3283064365386963e-10; // / 0x100000000
+}
+
+vec2 Hammersley(uint i, uint N) {
+   return vec2(float(i) / float(N), radicalInverse_VdC(i));
+}
+
+vec3 PrefilterEnvMap(float Roughness, vec3 R, ivec2 size, int layer)
+{
+  vec3 N = R;
+  vec3 V = R;
+  vec3 PrefilteredColor = vec3(0);
+  uint NumSamples = uint(4096 * 4);
+  float TotalWeight = 0.0;
+  for(uint i = uint(0); i < NumSamples; i++)
+  {
+    vec2 Xi = Hammersley(i, NumSamples);
+    vec3 H = ImportanceSampleGGX(Xi, Roughness, N);
+    vec3 L = 2.0 * dot(V, H) * H - V;
+    float NoL = clamp(dot(N, L), 0.0, 1.0);
+    if (NoL > 0.0)
+      {
+        vec2 uv = spec_uv_to_env_uv(ToUV(L), Roughness);
+        ivec2 texel = ivec2(uv * vec2(size));
+        PrefilteredColor += RGBMDecode(imageLoad(gbuffer_color, ivec3(texel, layer)));
+        TotalWeight += NoL;
+      }
+  }
+  return PrefilteredColor / TotalWeight;
+}
+
+vec3 compute_specular(vec2 in_uv, ivec2 size, int layer)
+{
+  float roughness = compute_roughness(in_uv);
+  return PrefilterEnvMap(roughness, uv_to_normal(in_uv), size, layer);
+}
 
 void main()
 {
@@ -70,4 +217,7 @@ void main()
     }
 
     imageStore(out_radiance, ivec3(texel, layer), vec4(acc, 1.0));
+
+    vec3 specular = compute_specular(vec2(texel) / vec2(size), size.xy, layer);
+    imageStore(out_reflexion, ivec3(texel, layer), vec4(acc, 1.0));
 }

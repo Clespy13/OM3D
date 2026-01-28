@@ -65,6 +65,7 @@ namespace OM3D
         Texture _gbuffer_depth_array;
         Texture _gbuffer_position_array;
         Texture _probe_radiance_array;
+        Texture _probe_reflexion_array;
 
         Texture _capture_color;
         Texture _capture_normal;

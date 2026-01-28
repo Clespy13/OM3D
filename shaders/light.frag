@@ -17,7 +17,8 @@ layout(binding = 4) uniform samplerCube in_envmap;
 layout(binding = 5) uniform sampler2D brdf_lut;
 layout(binding = 6) uniform sampler2DShadow in_shadow;
 layout(binding = 7) uniform samplerCubeArray probe_radiance;
-layout(binding = 8) uniform samplerCubeArray probe_depth;
+layout(binding = 8) uniform samplerCubeArray probe_reflexion;
+layout(binding = 9) uniform samplerCubeArray probe_depth;
 
 uniform uint debug_mode;
 
@@ -29,7 +30,7 @@ layout(binding = 1) buffer ProbeData {
     ProbeCamera cameras[];
 };
 
-vec3 get_probe_color(vec3 probe_pos, vec3 position) {
+vec3 get_probe_color(vec3 probe_pos, vec3 position, samplerCubeArray tex) {
     float layer = probe_pos.x + probe_pos.y * frame.probe_dim.x + probe_pos.z * frame.probe_dim.x * frame.probe_dim.y;
 
     vec3 probe_cube_center = frame.probe_min_pos.xyz + probe_pos * frame.probe_spacing.xyz;
@@ -41,10 +42,10 @@ vec3 get_probe_color(vec3 probe_pos, vec3 position) {
 
     if (dist > 0.001)
         return vec3(0);
-    return texture(probe_radiance, vec4(dir, layer)).rgb;
+    return texture(tex, vec4(dir, layer)).rgb;
 }
 
-vec3 probe_lighting(vec3 position) {
+vec3 probe_interpolate(vec3 position, samplerCubeArray tex) {
     vec3 start = position + frame.probe_min_pos.xyz;
     vec3 corner_pos = start / frame.probe_spacing.xyz;
 
@@ -57,14 +58,14 @@ vec3 probe_lighting(vec3 position) {
     p1 = clamp(p1, vec3(0.0), frame.probe_dim.xyz - 1.0);
 
     // NOTE: Si je me suis pas trompée, le 000 c'est le coin avant en bas à gauche
-    vec3 c000 = get_probe_color(vec3(p0.x, p0.y, p0.z), position);
-    vec3 c100 = get_probe_color(vec3(p1.x, p0.y, p0.z), position);
-    vec3 c010 = get_probe_color(vec3(p0.x, p1.y, p0.z), position);
-    vec3 c110 = get_probe_color(vec3(p1.x, p1.y, p0.z), position);
-    vec3 c001 = get_probe_color(vec3(p0.x, p0.y, p1.z), position);
-    vec3 c101 = get_probe_color(vec3(p1.x, p0.y, p1.z), position);
-    vec3 c011 = get_probe_color(vec3(p0.x, p1.y, p1.z), position);
-    vec3 c111 = get_probe_color(vec3(p1.x, p1.y, p1.z), position);
+    vec3 c000 = get_probe_color(vec3(p0.x, p0.y, p0.z), position, tex);
+    vec3 c100 = get_probe_color(vec3(p1.x, p0.y, p0.z), position, tex);
+    vec3 c010 = get_probe_color(vec3(p0.x, p1.y, p0.z), position, tex);
+    vec3 c110 = get_probe_color(vec3(p1.x, p1.y, p0.z), position, tex);
+    vec3 c001 = get_probe_color(vec3(p0.x, p0.y, p1.z), position, tex);
+    vec3 c101 = get_probe_color(vec3(p1.x, p0.y, p1.z), position, tex);
+    vec3 c011 = get_probe_color(vec3(p0.x, p1.y, p1.z), position, tex);
+    vec3 c111 = get_probe_color(vec3(p1.x, p1.y, p1.z), position, tex);
 
     vec3 off = fract(corner_pos);
 
@@ -78,6 +79,26 @@ vec3 probe_lighting(vec3 position) {
 
     vec3 result = mix(c0, c1, off.z);
     return result;
+}
+
+vec3 probe_lighting(vec3 position, vec3 N, vec3 V, vec3 albedo, float metallic, float roughness) {
+    const float NdotV = max(dot(N, V), 0.0);
+
+    const vec3 irradiance = probe_interpolate(position, probe_radiance);
+    const vec3 diffuse = irradiance * albedo;
+
+    const vec3 F0 = mix(vec3(0.04), albedo, metallic);
+    const vec3 F = f_schlick_roughness(NdotV, F0, roughness);
+
+    const vec3 prefiltered = probe_interpolate(position, probe_reflexion);
+
+    const vec2 brdf = texture(brdf_lut, vec2(NdotV, roughness)).rg;
+    const vec3 specular = prefiltered * (F * brdf.x + brdf.y);
+
+    const vec3 kS = F;
+    const vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
+
+    return kD * diffuse + specular;
 }
 
 void main() {
@@ -144,7 +165,7 @@ void main() {
 
         if (debug_mode != DebugNoProbe)
         {
-            vec3 lighting = probe_lighting(position);
+            vec3 lighting = probe_lighting(position, normal, view_dir, albedo.rgb, metallic, roughness);
             acc += lighting;
         }
 

@@ -132,6 +132,8 @@ namespace OM3D
             face_size, _probe_count, ImageFormat::RGBA16_FLOAT);
         _probe_radiance_array = Texture::empty_cubemap_array(
             face_size, _probe_count, ImageFormat::RGBA16_FLOAT);
+        _probe_reflexion_array = Texture::empty_cubemap_array(
+            face_size, _probe_count, ImageFormat::RGBA16_FLOAT);
 
         _capture_color =
             Texture::empty_cubemap(face_size, ImageFormat::RGBA8_UNORM);
@@ -309,7 +311,8 @@ namespace OM3D
 
         buffer.bind(BufferUsage::Storage, 1);
         _probe_radiance_array.bind(index);
-        _gbuffer_depth_array.bind(index + 1);
+        _probe_reflexion_array.bind(index + 1);
+        _gbuffer_depth_array.bind(index + 2);
     }
 
     void ProbeMap::bake_batch(const Scene& s)
@@ -344,6 +347,7 @@ namespace OM3D
             _gbuffer_normal_array.bind_as_image(1, AccessType::ReadOnly);
             _gbuffer_position_array.bind_as_image(2, AccessType::ReadOnly);
             _probe_radiance_array.bind_as_image(3, AccessType::WriteOnly);
+            _probe_reflexion_array.bind_as_image(4, AccessType::WriteOnly);
 
             const auto size = _gbuffer_color_array.size();
             const u32 group_x = (size.x + 7) / 8;
