@@ -166,55 +166,6 @@ namespace OM3D
         std::cout << "\nCreation done.\n";
     }
 
-    void ProbeMap::bake_all(const Scene& s)
-    {
-        if (_probe_count == 0)
-            return;
-
-        int counter = 0;
-        std::cout << "\nBaking Probe Radiance\n";
-        for (float z = 0; z < _dim.z; z++)
-        {
-            for (float y = 0; y < _dim.y; y++)
-            {
-                for (float x = 0; x < _dim.x; x++)
-                {
-                    bake_batch(s);
-
-                    std::cout << "\x1b[2K\r" << ++counter << " / " << _probe_count
-                              << std::flush;
-                }
-            }
-        }
-
-        std::cout << "\nBake done.\n";
-    }
-
-    void ProbeMap::render(const Camera& c) const
-    {
-        if (_dim == glm::vec3(0))
-            return;
-
-        for (int z = 0; z < _dim.z; z++)
-        {
-            for (int y = 0; y < _dim.y; y++)
-            {
-                for (int x = 0; x < _dim.x; x++)
-                {
-                    _probes[z][y][x]->render(c,
-                                             glm::vec3((float)x / 255.0f,
-                                                       (float)y / 255.0f,
-                                                       (float)z / 255.0f));
-                }
-            }
-        }
-    }
-
-    void ProbeMap::bind(int index) const
-    {
-        _probe_radiance_array.bind(index);
-    }
-
     void bake_gbuffer_face(const Scene& s, glm::vec3 probe_pos,
                            std::array<Texture*, 4> buffers, int layer,
                            int face_index)
@@ -250,6 +201,64 @@ namespace OM3D
         s.render_cube(cams[face_index], m);
     }
 
+    void ProbeMap::bake_all(const Scene& s)
+    {
+        if (_probe_count == 0)
+            return;
+
+        std::cout << "\nBaking Probe Radiance\n";
+        for (u32 i = 0; i < _probe_count; ++i)
+        {
+            const u32 base_layer = i * 6;
+            const u32 level_size = (u32)(_dim.x * _dim.y);
+            const u32 line_size = (u32)_dim.x;
+            const u32 z = i / level_size;
+            const u32 rem = i - z * level_size;
+            const u32 y = rem / line_size;
+            const u32 x = rem - y * line_size;
+            const glm::vec3 probe_pos = _probes[z][y][x]->_position;
+            for (u32 face = 0; face < 6; ++face)
+            {
+                const u32 layer = base_layer + face;
+                bake_gbuffer_face(s, probe_pos,
+                                  std::array{ &_gbuffer_depth_array,
+                                              &_gbuffer_color_array,
+                                              &_gbuffer_normal_array,
+                                              &_gbuffer_position_array },
+                                  layer, face);
+            }
+
+            std::cout << "\x1b[2K\r" << i << " / " << _probe_count << std::flush;
+        }
+
+        std::cout << "\nBake done.\n";
+    }
+
+    void ProbeMap::render(const Camera& c) const
+    {
+        if (_dim == glm::vec3(0))
+            return;
+
+        for (int z = 0; z < _dim.z; z++)
+        {
+            for (int y = 0; y < _dim.y; y++)
+            {
+                for (int x = 0; x < _dim.x; x++)
+                {
+                    _probes[z][y][x]->render(c,
+                                             glm::vec3((float)x / 255.0f,
+                                                       (float)y / 255.0f,
+                                                       (float)z / 255.0f));
+                }
+            }
+        }
+    }
+
+    void ProbeMap::bind(int index) const
+    {
+        _gbuffer_color_array.bind(index);
+    }
+
     void ProbeMap::bake_batch(const Scene& s)
     {
         if (_probe_count == 0)
@@ -270,16 +279,6 @@ namespace OM3D
             const u32 y = rem / line_size;
             const u32 x = rem - y * line_size;
             const glm::vec3 probe_pos = _probes[z][y][x]->_position;
-            for (u32 face = 0; face < 6; ++face)
-            {
-                const u32 layer = base_layer + face;
-                bake_gbuffer_face(s, probe_pos,
-                                  std::array{ &_gbuffer_depth_array,
-                                              &_gbuffer_color_array,
-                                              &_gbuffer_normal_array,
-                                              &_gbuffer_position_array },
-                                  layer, face);
-            }
 
             s.bind_probe_compute_uniforms();
 
